@@ -141,13 +141,13 @@ export function PortfolioStudio() {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
-  const score = useMemo(() => {
-    const confidence = Math.round(artifacts.reduce((sum, item) => sum + item.confidenceScore, 0) / artifacts.length);
+  const evidenceScore = useMemo(() => {
+    const sourceSignals = Math.round(artifacts.reduce((sum, item) => sum + item.confidenceScore, 0) / artifacts.length);
     const supported = sections.filter((section) => section.evidenceIds.length > 0).length;
     return {
-      confidence,
+      sourceSignals,
       supported,
-      readiness: Math.max(42, Math.min(96, confidence - gaps.length * 7 + supported * 3))
+      coverage: Math.max(42, Math.min(96, sourceSignals - gaps.length * 7 + supported * 3))
     };
   }, [artifacts, sections, gaps.length]);
 
@@ -218,17 +218,16 @@ export function PortfolioStudio() {
         Skip to workspace
       </a>
       <div className="grid min-h-dvh lg:grid-cols-[272px_1fr]">
-        <Sidebar score={score.readiness} />
+        <Sidebar />
         <section id="workspace" className="min-w-0 overflow-x-hidden">
           <TopBar persona={persona} onPersona={setPersona} onReset={resetDemo} />
           <div className="mx-auto flex w-full max-w-[1480px] flex-col gap-8 px-4 py-6 sm:px-6 lg:px-8">
-            <Hero score={score} artifacts={artifacts} />
+            <Hero />
+            <IngestionPanel onFiles={onFiles} isUploading={isUploading} uploadError={uploadError} />
+            <WorkflowRail />
 
             <section className="grid gap-5 xl:grid-cols-[1fr_380px]" aria-label="Founder demo workflow">
               <div className="space-y-5">
-                <WorkflowRail />
-                <CognitionPanel />
-                <IngestionPanel onFiles={onFiles} isUploading={isUploading} uploadError={uploadError} />
                 <AgentIntelligence artifacts={artifacts} gaps={gaps} lastAgentAction={lastAgentAction} />
                 <EvidenceMapPanel
                   artifacts={artifacts}
@@ -237,6 +236,7 @@ export function PortfolioStudio() {
                   onClusterStatus={updateClusterStatus}
                   onClusterChange={updateCluster}
                 />
+                <CognitionPanel />
                 <EditorPanel
                   sections={sections}
                   artifacts={artifacts}
@@ -259,7 +259,7 @@ export function PortfolioStudio() {
                   onTheme={setTheme}
                   audienceMode={audienceMode}
                   onAudienceMode={setAudienceMode}
-                  score={score.readiness}
+                  evidenceScore={evidenceScore.coverage}
                 />
                 <ProvenancePanel />
                 <PortfolioPreview
@@ -269,7 +269,7 @@ export function PortfolioStudio() {
                   sections={sections}
                   artifacts={artifacts}
                 />
-                <ExportPanel readiness={score.readiness} gaps={gaps.length} />
+                <ExportPanel evidenceCoverage={evidenceScore.coverage} gaps={gaps.length} />
               </aside>
             </section>
           </div>
@@ -279,7 +279,7 @@ export function PortfolioStudio() {
   );
 }
 
-function Sidebar({ score }: { score: number }) {
+function Sidebar() {
   return (
     <aside className="hidden border-r border-line bg-surface/90 px-5 py-6 lg:block">
       <div className="mb-8">
@@ -308,12 +308,9 @@ function Sidebar({ score }: { score: number }) {
       </nav>
 
       <div className="mt-8 rounded-lg border border-line bg-panel p-4">
-        <p className="text-xs uppercase tracking-[0.18em] text-muted">Publish readiness</p>
-        <p className="mt-3 text-3xl font-bold text-primary">{score}%</p>
-        <div className="mt-3 h-2 rounded-full bg-panelHigh">
-          <div className="h-full rounded-full bg-primary" style={{ width: `${score}%` }} />
-        </div>
-        <p className="mt-3 text-sm leading-6 text-muted">Evidence, persona fit, section coverage, and export hygiene.</p>
+        <p className="text-xs uppercase tracking-[0.18em] text-muted">Start here</p>
+        <p className="mt-3 text-xl font-semibold text-primary">Upload evidence</p>
+        <p className="mt-3 text-sm leading-6 text-muted">Documents, screenshots, research, slides, prototypes, resumes, and technical work.</p>
       </div>
     </aside>
   );
@@ -333,7 +330,7 @@ function TopBar({
       <div className="mx-auto flex max-w-[1480px] flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-xs uppercase tracking-[0.24em] text-primary">AI portfolio agent</p>
-          <h1 className="text-xl font-semibold tracking-tight">Evidence-backed portfolio generation workspace</h1>
+          <h1 className="text-xl font-semibold tracking-tight">Portfolio evidence workspace</h1>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <label className="sr-only" htmlFor="persona-select">Persona</label>
@@ -360,41 +357,28 @@ function TopBar({
   );
 }
 
-function Hero({
-  score,
-  artifacts
-}: {
-  score: { confidence: number; supported: number; readiness: number };
-  artifacts: Artifact[];
-}) {
+function Hero() {
   return (
-    <section className="grid gap-5 rounded-lg border border-line bg-panel/70 p-5 shadow-soft xl:grid-cols-[1.35fr_.65fr]">
-      <div className="flex flex-col justify-between gap-8">
-        <div>
-          <p className="mb-3 inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-primary">
-            <Sparkles className="h-3.5 w-3.5" aria-hidden />
-            Bring messy artifacts. Publish a portfolio.
-          </p>
-          <h2 className="max-w-4xl break-words text-4xl font-bold tracking-tight text-ink sm:text-5xl">
-            An agent that understands career evidence and turns it into a persona-aware portfolio.
-          </h2>
-          <p className="mt-4 max-w-3xl text-base leading-8 text-muted">
-            Auto-CaseStudy starts with evidence, not templates. It reads messy school and work artifacts, maps relationships, detects gaps, and helps users publish one strong case study without inventing unsupported claims.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-3">
-          <a href="#ingest" className="inline-flex min-h-11 items-center gap-2 rounded-md bg-primary px-4 font-semibold text-slateInk transition hover:bg-primary/90">
-            Start with artifacts <ArrowRight className="h-4 w-4" aria-hidden />
-          </a>
-          <a href="#preview" className="inline-flex min-h-11 items-center gap-2 rounded-md border border-line px-4 font-semibold text-ink transition hover:bg-panelHigh">
-            View generated portfolio
-          </a>
-        </div>
+    <section className="rounded-lg border border-line bg-panel/70 p-6 shadow-soft">
+      <div className="max-w-4xl">
+        <p className="mb-3 inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-primary">
+          <Sparkles className="h-3.5 w-3.5" aria-hidden />
+          Evidence-backed portfolio agent
+        </p>
+        <h2 className="max-w-4xl break-words text-4xl font-bold tracking-tight text-ink sm:text-5xl">
+          Turn messy career evidence into a publishable portfolio.
+        </h2>
+        <p className="mt-4 max-w-3xl text-base leading-8 text-muted">
+          Upload projects, documents, screenshots, research, and technical work. The agent organizes evidence, maps relationships, and generates editable portfolio stories.
+        </p>
       </div>
-      <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
-        <Metric label="Artifacts understood" value={artifacts.length.toString()} detail="Images, docs, Figma, resume, technical proof" />
-        <Metric label="Agent confidence" value={`${score.confidence}%`} detail="Average classification confidence" />
-        <Metric label="Publish readiness" value={`${score.readiness}%`} detail={`${score.supported} evidence-backed sections`} />
+      <div className="mt-6 flex flex-wrap gap-3">
+        <a href="#ingest" className="inline-flex min-h-11 items-center gap-2 rounded-md bg-primary px-4 font-semibold text-slateInk transition hover:bg-primary/90">
+          Upload artifacts <Upload className="h-4 w-4" aria-hidden />
+        </a>
+        <a href="#preview" className="inline-flex min-h-11 items-center gap-2 rounded-md border border-line px-4 font-semibold text-ink transition hover:bg-panelHigh">
+          View example portfolio <ArrowRight className="h-4 w-4" aria-hidden />
+        </a>
       </div>
     </section>
   );
@@ -412,11 +396,13 @@ function Metric({ label, value, detail }: { label: string; value: string; detail
 
 function WorkflowRail() {
   return (
-    <section id="strategy" className="grid gap-3 md:grid-cols-3">
+    <section id="strategy" className="grid gap-3 md:grid-cols-5" aria-label="Simple workflow">
       {[
-        ["1", "Understand artifacts", "Classify files, links, images, resumes, and technical proof."],
-        ["2", "Infer persona", "Choose the strongest portfolio strategy for the user."],
-        ["3", "Generate and publish", "Draft pages, preserve evidence, and export hostable content."]
+        ["1", "Upload", "Add your evidence."],
+        ["2", "Understand", "Extract source clues."],
+        ["3", "Organize", "Group by project."],
+        ["4", "Generate", "Draft the story."],
+        ["5", "Publish", "Share the portfolio."]
       ].map(([number, title, detail]) => (
         <div key={number} className="rounded-lg border border-line bg-surface p-4">
           <div className="mb-4 flex h-8 w-8 items-center justify-center rounded-md bg-primary/15 text-sm font-bold text-primary">{number}</div>
@@ -434,10 +420,7 @@ function CognitionPanel() {
       <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-xs uppercase tracking-[0.18em] text-primary">Professional cognition layer</p>
-          <h2 className="mt-2 text-2xl font-semibold">Same artifact, different expert interpretation</h2>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
-            The wedge is HCI, UX, and early-career design portfolios. The agent should reason like the role the user wants to become, then preserve provenance for every strong claim.
-          </p>
+          <h2 className="mt-2 text-2xl font-semibold">Different experts read evidence differently</h2>
         </div>
         <span className="inline-flex min-h-11 items-center gap-2 rounded-md border border-primary/25 bg-primary/10 px-3 text-sm font-semibold text-primary">
           <Network className="h-4 w-4" aria-hidden />
@@ -450,9 +433,8 @@ function CognitionPanel() {
             <h3 className="font-semibold text-ink">{mode.agent}</h3>
             <p className="mt-2 text-xs uppercase tracking-[0.16em] text-muted">Reads</p>
             <p className="mt-1 text-sm leading-6 text-muted">{mode.reads}</p>
-            <p className="mt-3 text-xs uppercase tracking-[0.16em] text-muted">Understands</p>
+            <p className="mt-3 text-xs uppercase tracking-[0.16em] text-muted">Finds</p>
             <p className="mt-1 text-sm leading-6 text-muted">{mode.sees}</p>
-            <p className="mt-3 rounded-md border border-primary/20 bg-primary/10 p-3 text-sm leading-6 text-primary">{mode.question}</p>
           </article>
         ))}
       </div>
@@ -470,13 +452,13 @@ function IngestionPanel({
   uploadError: string;
 }) {
   return (
-    <section id="ingest" className="rounded-lg border border-line bg-surface p-5">
+    <section id="ingest" className="rounded-lg border border-primary/25 bg-surface p-5 shadow-glow">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-xs uppercase tracking-[0.18em] text-primary">Artifact ingestion</p>
-          <h2 className="mt-2 text-2xl font-semibold">Drop in the messy proof</h2>
+          <p className="text-xs uppercase tracking-[0.18em] text-primary">Start here</p>
+          <h2 className="mt-2 text-3xl font-semibold">Upload your messy evidence</h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
-            Step 002 stores real PDF, DOCX, image, and slide files locally and creates metadata records. It does not parse document content yet.
+            Add PDFs, DOCX files, slides, images, screenshots, research notes, certificates, resumes, or technical proof.
           </p>
         </div>
         <label className={cn("inline-flex min-h-11 items-center gap-2 rounded-md px-4 font-semibold text-slateInk transition", isUploading ? "bg-muted" : "bg-primary hover:bg-primary/90")}>
@@ -498,9 +480,9 @@ function IngestionPanel({
         </p>
       ) : null}
       <div className="mt-5 rounded-md border border-line bg-background p-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">Current ingestion pipe</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">What happens next</p>
         <div className="mt-3 grid gap-2 text-sm text-muted sm:grid-cols-5">
-          {["Upload UI", "API file handler", "Local storage", "Metadata record", "Artifact library"].map((step, index) => (
+          {["Store file", "Extract text", "Classify", "Group evidence", "Prepare story"].map((step, index) => (
             <div key={step} className="rounded-md border border-line bg-panel p-3">
               <span className="text-primary">0{index + 1}</span>
               <p className="mt-1">{step}</p>
@@ -540,8 +522,8 @@ function AgentIntelligence({
       <div className="rounded-lg border border-line bg-surface p-5">
         <div className="mb-5 flex items-center justify-between gap-3">
           <div>
-            <p className="text-xs uppercase tracking-[0.18em] text-primary">Agent analysis</p>
-            <h2 className="mt-2 text-2xl font-semibold">Artifact intelligence graph</h2>
+            <p className="text-xs uppercase tracking-[0.18em] text-primary">After upload</p>
+            <h2 className="mt-2 text-2xl font-semibold">Artifact review</h2>
           </div>
           <BadgeCheck className="h-6 w-6 text-emerald" aria-label="Evidence checked" />
         </div>
@@ -553,7 +535,7 @@ function AgentIntelligence({
                 <th className="py-3 pr-4 font-semibold">Type</th>
                 <th className="py-3 pr-4 font-semibold">Status</th>
                 <th className="py-3 pr-4 font-semibold">Phase</th>
-                <th className="py-3 pr-4 font-semibold">Confidence</th>
+                <th className="py-3 pr-4 font-semibold">Source signals</th>
                 <th className="py-3 pr-4 font-semibold">Placement</th>
               </tr>
             </thead>
@@ -585,7 +567,7 @@ function AgentIntelligence({
                             {artifact.classification.classification}
                           </span>
                           <span className="text-xs text-primary">
-                            {artifact.classification.confidenceScore}% classification confidence
+                            Source signal strength: {artifact.classification.confidenceScore}%
                           </span>
                         </div>
                         <div className="mt-3 grid gap-2 text-xs text-muted sm:grid-cols-2">
@@ -616,7 +598,7 @@ function AgentIntelligence({
                   <td className="py-3 pr-4 text-muted">{artifact.phase}</td>
                   <td className="py-3 pr-4">
                     <span className={cn("rounded-full px-2.5 py-1 text-xs font-semibold", artifact.confidence === "High" ? "bg-emerald/15 text-emerald" : artifact.confidence === "Medium" ? "bg-amber/15 text-amber" : "bg-danger/15 text-danger")}>
-                      {artifact.confidence} · {artifact.confidenceScore}%
+                      {artifact.confidence} signal
                     </span>
                   </td>
                   <td className="py-3 pr-4 text-muted">{artifact.suggestedPlacement}</td>
@@ -748,7 +730,7 @@ function EvidenceMapPanel({
                     </button>
                   </div>
                   <p className="mt-1 text-xs uppercase tracking-[0.14em] text-muted">
-                    {cluster.confidenceScore}% grouping confidence · {cluster.status}
+                    Grouping signal: {cluster.confidenceScore}% - {cluster.status}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -984,7 +966,7 @@ function StrategyPanel({
   persona,
   theme,
   audienceMode,
-  score,
+  evidenceScore,
   onPersona,
   onTheme,
   onAudienceMode
@@ -992,15 +974,15 @@ function StrategyPanel({
   persona: Persona;
   theme: PortfolioTheme;
   audienceMode: string;
-  score: number;
+  evidenceScore: number;
   onPersona: (persona: Persona) => void;
   onTheme: (theme: PortfolioTheme) => void;
   onAudienceMode: (mode: "Portfolio" | "Research" | "Technical") => void;
 }) {
   return (
     <section className="rounded-lg border border-line bg-surface p-5">
-      <p className="text-xs uppercase tracking-[0.18em] text-primary">Portfolio strategy</p>
-      <h2 className="mt-2 text-xl font-semibold">Persona-aware generation</h2>
+      <p className="text-xs uppercase tracking-[0.18em] text-primary">Portfolio settings</p>
+      <h2 className="mt-2 text-xl font-semibold">Shape the output</h2>
       <div className="mt-4 space-y-4">
         <Field label="Persona">
           <select value={persona} onChange={(event) => onPersona(event.target.value as Persona)} className="min-h-11 w-full rounded-md border border-line bg-panel px-3 text-sm">
@@ -1028,11 +1010,11 @@ function StrategyPanel({
       </div>
       <div className="mt-5 rounded-md border border-line bg-panel p-4">
         <div className="flex items-center justify-between">
-          <span className="text-sm text-muted">Founder demo strength</span>
-          <span className="font-bold text-primary">{score}%</span>
+          <span className="text-sm text-muted">Evidence coverage</span>
+          <span className="font-bold text-primary">{evidenceScore}%</span>
         </div>
         <div className="mt-3 h-2 rounded-full bg-background">
-          <div className="h-full rounded-full bg-emerald" style={{ width: `${score}%` }} />
+          <div className="h-full rounded-full bg-emerald" style={{ width: `${evidenceScore}%` }} />
         </div>
       </div>
     </section>
@@ -1042,11 +1024,9 @@ function StrategyPanel({
 function ProvenancePanel() {
   return (
     <section className="rounded-lg border border-line bg-surface p-5">
-      <p className="text-xs uppercase tracking-[0.18em] text-primary">Provenance graph</p>
-      <h2 className="mt-2 text-xl font-semibold">No claim without source memory</h2>
-      <p className="mt-2 text-sm leading-6 text-muted">
-        The early MVP simulates this graph. Phase 2 replaces filenames with real parsing, extraction, and artifact relationships.
-      </p>
+      <p className="text-xs uppercase tracking-[0.18em] text-primary">Evidence & trust</p>
+      <h2 className="mt-2 text-xl font-semibold">No claim without evidence</h2>
+      <p className="mt-2 text-sm leading-6 text-muted">Every generated section should link back to source artifacts.</p>
       <div className="mt-4 space-y-3">
         {provenanceLinks.map(([source, target, relation]) => (
           <div key={`${source}-${target}`} className="rounded-md border border-line bg-panel p-3">
@@ -1122,8 +1102,8 @@ function PortfolioPreview({
   );
 }
 
-function ExportPanel({ readiness, gaps }: { readiness: number; gaps: number }) {
-  const ready = readiness >= 80 && gaps <= 2;
+function ExportPanel({ evidenceCoverage, gaps }: { evidenceCoverage: number; gaps: number }) {
+  const ready = evidenceCoverage >= 80 && gaps <= 2;
   return (
     <section id="export" className="rounded-lg border border-line bg-surface p-5">
       <p className="text-xs uppercase tracking-[0.18em] text-primary">Publish/export hub</p>
@@ -1154,3 +1134,4 @@ function ExportPanel({ readiness, gaps }: { readiness: number; gaps: number }) {
     </section>
   );
 }
+
