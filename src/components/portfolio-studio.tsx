@@ -221,13 +221,13 @@ export function PortfolioStudio() {
         <Sidebar />
         <section id="workspace" className="min-w-0 overflow-x-hidden">
           <TopBar persona={persona} onPersona={setPersona} onReset={resetDemo} />
-          <div className="mx-auto flex w-full max-w-[1480px] flex-col gap-8 px-4 py-6 sm:px-6 lg:px-8">
+          <div className="mx-auto flex w-full max-w-[1480px] flex-col gap-10 px-4 py-8 sm:px-6 lg:px-8">
             <Hero />
             <IngestionPanel onFiles={onFiles} isUploading={isUploading} uploadError={uploadError} />
             <WorkflowRail />
 
-            <section className="grid gap-5 xl:grid-cols-[1fr_380px]" aria-label="Founder demo workflow">
-              <div className="space-y-5">
+            <section className="grid gap-8 xl:grid-cols-[1fr_380px]" aria-label="Founder demo workflow">
+              <div className="space-y-8">
                 <AgentIntelligence artifacts={artifacts} gaps={gaps} lastAgentAction={lastAgentAction} />
                 <EvidenceMapPanel
                   artifacts={artifacts}
@@ -359,25 +359,21 @@ function TopBar({
 
 function Hero() {
   return (
-    <section className="rounded-lg border border-line bg-panel/70 p-6 shadow-soft">
+    <section className="animate-soft-in rounded-lg border border-line bg-panel/70 p-7 shadow-soft sm:p-9">
       <div className="max-w-4xl">
-        <p className="mb-3 inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-primary">
-          <Sparkles className="h-3.5 w-3.5" aria-hidden />
-          Evidence-backed portfolio agent
-        </p>
         <h2 className="max-w-4xl break-words text-4xl font-bold tracking-tight text-ink sm:text-5xl">
           Turn messy career evidence into a publishable portfolio.
         </h2>
-        <p className="mt-4 max-w-3xl text-base leading-8 text-muted">
-          Upload projects, documents, screenshots, research, and technical work. The agent organizes evidence, maps relationships, and generates editable portfolio stories.
+        <p className="mt-4 max-w-2xl text-base leading-8 text-muted">
+          Upload your artifacts. Auto-CaseStudy organizes them into editable portfolio stories.
         </p>
       </div>
-      <div className="mt-6 flex flex-wrap gap-3">
+      <div className="mt-7 flex flex-wrap gap-3">
         <a href="#ingest" className="inline-flex min-h-11 items-center gap-2 rounded-md bg-primary px-4 font-semibold text-slateInk transition hover:bg-primary/90">
           Upload artifacts <Upload className="h-4 w-4" aria-hidden />
         </a>
-        <a href="#preview" className="inline-flex min-h-11 items-center gap-2 rounded-md border border-line px-4 font-semibold text-ink transition hover:bg-panelHigh">
-          View example portfolio <ArrowRight className="h-4 w-4" aria-hidden />
+        <a href="#how-it-works" className="inline-flex min-h-11 items-center gap-2 rounded-md border border-line px-4 font-semibold text-ink transition hover:bg-panelHigh">
+          Learn how it works <ArrowRight className="h-4 w-4" aria-hidden />
         </a>
       </div>
     </section>
@@ -396,15 +392,14 @@ function Metric({ label, value, detail }: { label: string; value: string; detail
 
 function WorkflowRail() {
   return (
-    <section id="strategy" className="grid gap-3 md:grid-cols-5" aria-label="Simple workflow">
+    <section id="how-it-works" className="grid gap-3 md:grid-cols-4" aria-label="Simple workflow">
       {[
         ["1", "Upload", "Add your evidence."],
-        ["2", "Understand", "Extract source clues."],
-        ["3", "Organize", "Group by project."],
-        ["4", "Generate", "Draft the story."],
-        ["5", "Publish", "Share the portfolio."]
+        ["2", "Organize", "Group by project."],
+        ["3", "Generate", "Draft the story."],
+        ["4", "Publish", "Share the portfolio."]
       ].map(([number, title, detail]) => (
-        <div key={number} className="rounded-lg border border-line bg-surface p-4">
+        <div key={number} className="workflow-card rounded-lg border border-line bg-surface p-4 transition duration-200 hover:-translate-y-1 hover:border-primary/30 hover:bg-panel">
           <div className="mb-4 flex h-8 w-8 items-center justify-center rounded-md bg-primary/15 text-sm font-bold text-primary">{number}</div>
           <h3 className="font-semibold">{title}</h3>
           <p className="mt-2 text-sm leading-6 text-muted">{detail}</p>
@@ -452,59 +447,89 @@ function IngestionPanel({
   uploadError: string;
 }) {
   return (
-    <section id="ingest" className="rounded-lg border border-primary/25 bg-surface p-5 shadow-glow">
-      <div className="flex flex-wrap items-start justify-between gap-4">
+    <section id="ingest" className="animate-soft-in-delay rounded-lg border border-primary/25 bg-surface p-5 shadow-glow sm:p-7">
+      <div className="grid gap-6 xl:grid-cols-[1.15fr_.85fr]">
         <div>
           <p className="text-xs uppercase tracking-[0.18em] text-primary">Start here</p>
           <h2 className="mt-2 text-3xl font-semibold">Upload your messy evidence</h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
-            Add PDFs, DOCX files, slides, images, screenshots, research notes, certificates, resumes, or technical proof.
-          </p>
+          <label className={cn("mt-5 flex min-h-[250px] cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed p-6 text-center transition duration-200", isUploading ? "border-muted bg-panel" : "border-primary/45 bg-background hover:-translate-y-1 hover:border-primary hover:bg-panel")}>
+            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/15 text-primary">
+              <Upload className="h-6 w-6" aria-hidden />
+            </span>
+            <span className="mt-4 text-xl font-semibold text-ink">{isUploading ? "Uploading..." : "Drag files here or click to upload"}</span>
+            <span className="mt-2 max-w-md text-sm leading-6 text-muted">
+              PDF, DOCX, PPTX, screenshots, research notes, resumes, certificates, diagrams, and portfolio images.
+            </span>
+            <span className="mt-5 inline-flex min-h-11 items-center rounded-md bg-primary px-4 font-semibold text-slateInk">
+              Choose artifacts
+            </span>
+            <input
+              className="sr-only"
+              type="file"
+              multiple
+              accept=".pdf,.doc,.docx,.ppt,.pptx,.png,.jpg,.jpeg,.webp,.gif"
+              onChange={onFiles}
+              disabled={isUploading}
+            />
+          </label>
+          <p className="mt-3 text-xs leading-5 text-faint">Examples: interview notes, Figma screenshots, project reports, slide decks, final designs, cloud diagrams, resume material.</p>
         </div>
-        <label className={cn("inline-flex min-h-11 items-center gap-2 rounded-md px-4 font-semibold text-slateInk transition", isUploading ? "bg-muted" : "bg-primary hover:bg-primary/90")}>
-          <Upload className="h-4 w-4" aria-hidden />
-          {isUploading ? "Uploading..." : "Add files"}
-          <input
-            className="sr-only"
-            type="file"
-            multiple
-            accept=".pdf,.doc,.docx,.ppt,.pptx,.png,.jpg,.jpeg,.webp,.gif"
-            onChange={onFiles}
-            disabled={isUploading}
-          />
-        </label>
+        <div className="grid gap-4">
+          <TransformPreview />
+          <SamplePortfolioCard />
+        </div>
       </div>
       {uploadError ? (
         <p className="mt-4 rounded-md border border-danger/25 bg-danger/10 p-3 text-sm text-danger" role="alert">
           {uploadError}
         </p>
       ) : null}
-      <div className="mt-5 rounded-md border border-line bg-background p-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">What happens next</p>
-        <div className="mt-3 grid gap-2 text-sm text-muted sm:grid-cols-5">
-          {["Store file", "Extract text", "Classify", "Group evidence", "Prepare story"].map((step, index) => (
-            <div key={step} className="rounded-md border border-line bg-panel p-3">
-              <span className="text-primary">0{index + 1}</span>
-              <p className="mt-1">{step}</p>
-            </div>
+    </section>
+  );
+}
+
+function TransformPreview() {
+  return (
+    <div className="rounded-lg border border-line bg-background p-4">
+      <p className="text-xs uppercase tracking-[0.16em] text-muted">Live preview</p>
+      <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
+        <div className="rounded-md border border-line bg-panel p-3">
+          <p className="text-sm font-semibold">Messy upload</p>
+          {["InterviewNotes.pdf", "wireframe-final.png", "Research slides.pptx"].map((item) => (
+            <p key={item} className="mt-2 rounded border border-line bg-background px-2 py-1 text-xs text-muted">{item}</p>
           ))}
         </div>
-      </div>
-      <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {[
-          ["Visuals", "Screenshots, photos, wireframes", Image],
-          ["Documents", "PDF, DOCX, notes, slides", FileText],
-          ["Prototypes", "Figma links and flows", Link],
-          ["Technical proof", "Cloud diagrams, code, systems", Cloud]
-        ].map(([title, detail, Icon]) => (
-          <div key={title as string} className="rounded-md border border-line bg-panel p-4">
-            <Icon className="h-5 w-5 text-primary" aria-hidden />
-            <h3 className="mt-3 font-semibold">{title as string}</h3>
-            <p className="mt-1 text-sm text-muted">{detail as string}</p>
+        <ArrowRight className="transform-line hidden h-5 w-5 text-primary sm:block" aria-hidden />
+        <div className="rounded-md border border-primary/25 bg-primary/10 p-3">
+          <p className="text-sm font-semibold text-primary">Clean case study</p>
+          <div className="mt-3 space-y-2">
+            <div className="h-2 rounded bg-primary/60" />
+            <div className="h-2 w-4/5 rounded bg-primary/30" />
+            <div className="h-2 w-3/5 rounded bg-primary/20" />
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SamplePortfolioCard() {
+  return (
+    <div className="rounded-lg border border-line bg-panel p-4 transition duration-200 hover:-translate-y-1 hover:border-primary/30">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs uppercase tracking-[0.16em] text-primary">Example output</p>
+          <h3 className="mt-2 text-lg font-semibold">Mobile onboarding redesign</h3>
+        </div>
+        <span className="rounded-full bg-emerald/15 px-2.5 py-1 text-xs font-semibold text-emerald">Editable</span>
+      </div>
+      <p className="mt-3 text-sm leading-6 text-muted">Problem, role, research evidence, design decisions, and outcome are shaped into a recruiter-ready story.</p>
+      <div className="mt-4 grid grid-cols-3 gap-2">
+        {["Research", "Design", "Outcome"].map((item) => (
+          <span key={item} className="rounded-md border border-line bg-background px-2 py-2 text-center text-xs text-muted">{item}</span>
         ))}
       </div>
-    </section>
+    </div>
   );
 }
 

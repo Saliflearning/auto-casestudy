@@ -51,6 +51,71 @@ a {
   background: rgba(130, 135, 255, 0.45);
 }
 
+.animate-soft-in {
+  animation: soft-in 520ms ease-out both;
+}
+
+.animate-soft-in-delay {
+  animation: soft-in 680ms ease-out 100ms both;
+}
+
+.workflow-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.workflow-card::after {
+  background: linear-gradient(90deg, transparent, rgba(191, 199, 255, 0.55), transparent);
+  content: "";
+  height: 2px;
+  left: -40%;
+  position: absolute;
+  right: auto;
+  top: 0;
+  width: 40%;
+  animation: workflow-scan 3.4s ease-in-out infinite;
+}
+
+.transform-line {
+  animation: transform-line 3.2s ease-in-out infinite;
+}
+
+@keyframes soft-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes workflow-scan {
+  0% {
+    left: -40%;
+  }
+
+  45%,
+  100% {
+    left: 100%;
+  }
+}
+
+@keyframes transform-line {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: translateX(0);
+  }
+
+  50% {
+    opacity: 1;
+    transform: translateX(8px);
+  }
+}
+
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
