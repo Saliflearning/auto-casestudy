@@ -1,0 +1,88 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Artifact {
+  id         String   @id
+  userId     String
+  fileName   String
+  fileType   String
+  mimeType   String
+  sizeBytes  Int
+  storageUrl String
+  storageKey String
+  status     String
+  parserError String?
+  uploadedAt DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  extractedContent ArtifactExtractedContent?
+  classification ArtifactClassification?
+  sourceRelationships ArtifactRelationship[] @relation("SourceArtifact")
+  targetRelationships ArtifactRelationship[] @relation("TargetArtifact")
+
+  @@index([userId])
+  @@index([status])
+  @@index([uploadedAt])
+}
+
+model ArtifactExtractedContent {
+  id            String   @id
+  artifactId    String   @unique
+  text          String
+  parser        String
+  parserVersion String
+  createdAt     DateTime @default(now())
+  artifact      Artifact @relation(fields: [artifactId], references: [id], onDelete: Cascade)
+}
+
+model ArtifactClassification {
+  id                String   @id
+  artifactId        String   @unique
+  classification    String
+  confidenceScore   Int
+  projectName       String?
+  courseOrJob       String?
+  tools             String[]
+  methods           String[]
+  dates             String[]
+  outcomes          String[]
+  tags              String[]
+  classifier        String
+  classifierVersion String
+  createdAt         DateTime @default(now())
+  artifact          Artifact @relation(fields: [artifactId], references: [id], onDelete: Cascade)
+}
+
+model ProjectCluster {
+  id              String   @id
+  label           String
+  artifactIds     String[]
+  reasons         String[]
+  confidenceScore Int
+  status          String
+  createdAt       DateTime @default(now())
+
+  @@index([status])
+}
+
+model ArtifactRelationship {
+  id               String   @id
+  sourceArtifactId String
+  targetArtifactId String
+  type             String
+  reason           String
+  confidenceScore  Int
+  status           String
+  createdAt        DateTime @default(now())
+  sourceArtifact   Artifact @relation("SourceArtifact", fields: [sourceArtifactId], references: [id], onDelete: Cascade)
+  targetArtifact   Artifact @relation("TargetArtifact", fields: [targetArtifactId], references: [id], onDelete: Cascade)
+
+  @@index([sourceArtifactId])
+  @@index([targetArtifactId])
+  @@index([status])
+}

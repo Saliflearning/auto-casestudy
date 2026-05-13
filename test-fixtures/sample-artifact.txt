@@ -1,0 +1,1 @@
+This unsupported text fixture exists only to verify upload rejection during Step 002.
