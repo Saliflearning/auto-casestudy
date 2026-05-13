@@ -24,7 +24,7 @@ flowchart TD
 - Templates: persona-specific portfolio presentation systems.
 - Publish: hosted website and export readiness.
 
-## Portfolio Creator Flow
+## Portfolio Owner Flow
 
 1. Land on Home.
 2. Understand that Auto-CaseStudy creates a full portfolio website.
@@ -37,16 +37,13 @@ flowchart TD
 9. Edit portfolio content and preview.
 10. Publish hosted portfolio website.
 
-## Fan/User Flow
+## Public Portfolio Viewer Flow
 
-Current product does not include a fan marketplace or fan account model.
-
-If "fan" means public portfolio viewer:
 1. Viewer opens a published portfolio URL.
 2. Viewer scans home/profile.
 3. Viewer opens project cards or case studies.
 4. Viewer checks skills, resume, contact.
-5. Viewer contacts or shares the creator.
+5. Viewer contacts or shares the portfolio owner.
 
 ## Admin Flow
 
@@ -105,3 +102,7 @@ Future:
 - Public site explains the product and portfolio output.
 - Studio performs upload, review, editing, and publishing.
 - Public published portfolios should eventually be separate from the product marketing site.
+
+## Explicitly Excluded Flows
+
+The Auto-CaseStudy repository should not include creator marketplace, fan engagement, fintech, booking, payout, or subscription flows. Those topics belong to separate exploratory projects and must not shape this platform's architecture.

@@ -102,7 +102,7 @@ Future auth requirements:
 ## Service Boundaries
 
 - Public Site: marketing and product education.
-- Studio UI: authenticated creator interface.
+- Studio UI: authenticated portfolio owner interface.
 - Artifact Service: file metadata, storage, extraction status.
 - Parsing Service: raw content extraction.
 - Intelligence Service: classification, relationship mapping, future AI orchestration.

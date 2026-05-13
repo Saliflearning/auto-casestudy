@@ -116,17 +116,11 @@ Represents evidence relationships such as same project, same course/job, same to
 
 Events should include actor, target entity, timestamps, payload version, and request id.
 
-## Booking and Payment Models
+## Explicitly Excluded Data Domains
 
-Booking/payment is out of current Auto-CaseStudy MVP scope.
+Do not add marketplace, fintech, booking, payout, fan engagement, celebrity subscription, or mobile money schemas to this repository.
 
-If the product later adds services such as portfolio reviews or mentor bookings:
-- Booking: creator, reviewer, time, status.
-- Payment: provider id, amount, currency, status.
-- Invoice/Receipt: payment records.
-- Entitlement: access to paid review/export/domain features.
-
-Do not add these tables until a business workflow requires them.
+Auto-CaseStudy data models must remain focused on portfolio website generation, artifact evidence, projects, case studies, publishing, permissions, and auditability.
 
 ## Permission Structures
 

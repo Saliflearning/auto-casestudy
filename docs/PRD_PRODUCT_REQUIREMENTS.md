@@ -19,7 +19,7 @@ The product starts with the question: "Show me what you have done." It then orga
 
 - Help users create a publishable portfolio website faster than manual writing and layout tools.
 - Differentiate through evidence intelligence, provenance, and professional cognition modes.
-- Build toward hosted portfolio publishing and paid creator workflows.
+- Build toward hosted portfolio publishing and professional portfolio workflows.
 - Maintain trust by preventing unsupported AI claims.
 
 ## Core Workflows
@@ -51,7 +51,7 @@ The product starts with the question: "Show me what you have done." It then orga
 - As a UX researcher, I want claims linked to source artifacts so I can trust and defend generated case studies.
 - As a product designer, I want visuals placed into project pages so my process and final design are easy to scan.
 - As a technical hybrid, I want technical documents and cloud diagrams represented without losing UX storytelling.
-- As a portfolio creator, I want to edit or override AI assumptions before publishing.
+- As a portfolio owner, I want to edit or override AI assumptions before publishing.
 - As a future admin, I want auditability and permission control for user data.
 
 ## Functional Requirements
@@ -113,4 +113,6 @@ The product starts with the question: "Show me what you have done." It then orga
 
 In scope: portfolio website creation, artifact intelligence, project/case-study generation, evidence traceability, publishing workflow.
 
-Out of scope for current MVP: booking, payments, marketplace transactions, recruiter analytics, institutional dashboards, real-time collaboration.
+Out of scope for this repository: creator marketplaces, fan engagement platforms, fintech, mobile money, booking, payout, celebrity subscription, and payment ecosystems.
+
+Out of scope for current MVP but potentially relevant later: recruiter analytics, institutional dashboards, real-time collaboration, mentor review, and advanced exports.

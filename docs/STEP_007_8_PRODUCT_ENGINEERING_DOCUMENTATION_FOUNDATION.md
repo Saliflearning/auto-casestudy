@@ -29,8 +29,8 @@ flowchart TD
 - `PRD_PRODUCT_REQUIREMENTS.md`: product vision, users, workflows, requirements, metrics, MVP, roadmap.
 - `TRD_TECHNICAL_REQUIREMENTS.md`: architecture, API strategy, infra, auth, security, deployment, observability.
 - `UI_UX_DESIGN_SYSTEM.md`: typography, color, spacing, motion, accessibility, component, navigation, and HCI rules.
-- `APP_FLOW.md`: navigation map, portfolio creator flow, public viewer flow, admin flow, upload-to-publish flow.
-- `BACKEND_SCHEMA.md`: current schema, future entities, permissions, audit logging, and out-of-scope booking/payment notes.
+- `APP_FLOW.md`: navigation map, portfolio owner flow, public viewer flow, admin flow, upload-to-publish flow.
+- `BACKEND_SCHEMA.md`: current schema, future entities, permissions, audit logging, and explicit exclusions for unrelated marketplace/fintech domains.
 - `IMPLEMENTATION_PLAN.md`: milestones, dependencies, QA, release, rollback, and definitions of done.
 
 ## How To Reproduce It
