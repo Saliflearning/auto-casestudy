@@ -501,7 +501,7 @@ function TransformPreview() {
         </div>
         <ArrowRight className="transform-line hidden h-5 w-5 text-primary sm:block" aria-hidden />
         <div className="rounded-md border border-primary/25 bg-primary/10 p-3">
-          <p className="text-sm font-semibold text-primary">Clean case study</p>
+          <p className="text-sm font-semibold text-primary">Portfolio page</p>
           <div className="mt-3 space-y-2">
             <div className="h-2 rounded bg-primary/60" />
             <div className="h-2 w-4/5 rounded bg-primary/30" />
@@ -876,8 +876,8 @@ function EditorPanel({
     <section id="editor" className="rounded-lg border border-line bg-surface p-5">
       <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-xs uppercase tracking-[0.18em] text-primary">Editable case study builder</p>
-          <h2 className="mt-2 text-2xl font-semibold">Drag sections, lock edits, command the agent</h2>
+          <p className="text-xs uppercase tracking-[0.18em] text-primary">Portfolio site editor</p>
+          <h2 className="mt-2 text-2xl font-semibold">Edit pages, project stories, and evidence-backed sections</h2>
         </div>
         <button onClick={onRegenerate} className="inline-flex min-h-11 items-center gap-2 rounded-md border border-line px-4 font-semibold text-ink transition hover:bg-panelHigh">
           <WandSparkles className="h-4 w-4" aria-hidden />
@@ -1136,7 +1136,7 @@ function ExportPanel({ evidenceCoverage, gaps }: { evidenceCoverage: number; gap
       <div className="mt-4 space-y-3">
         {[
           ["Static web export", "Generate deployable portfolio pages", MonitorUp],
-          ["PDF case study packet", "Recruiter and academic share format", FileText],
+          ["PDF portfolio packet", "Recruiter and academic share format", FileText],
           ["Markdown handoff", "Portable content for GitHub, Notion, Webflow", ClipboardList],
           ["Accessibility queue", "Alt text, contrast, semantic review", Accessibility]
         ].map(([title, detail, Icon]) => (

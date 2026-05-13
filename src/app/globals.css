@@ -5,6 +5,12 @@
 :root {
   color-scheme: dark;
   --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --radius-control: 6px;
+  --radius-card: 8px;
+  --space-section: clamp(3rem, 7vw, 6rem);
+  --motion-short: 180ms;
+  --motion-medium: 280ms;
+  --shadow-card: 0 18px 60px -36px rgba(0, 0, 0, 0.8);
 }
 
 * {
