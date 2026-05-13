@@ -4,6 +4,19 @@ Auto-CaseStudy is an agentic portfolio builder for HCI students, UX students, an
 
 It turns scattered school, work, and project evidence into polished, editable portfolio stories.
 
+## Core Documentation
+
+The project now uses formal product and engineering documents as the source of truth for future development:
+
+- `docs/PRD_PRODUCT_REQUIREMENTS.md`
+- `docs/TRD_TECHNICAL_REQUIREMENTS.md`
+- `docs/UI_UX_DESIGN_SYSTEM.md`
+- `docs/APP_FLOW.md`
+- `docs/BACKEND_SCHEMA.md`
+- `docs/IMPLEMENTATION_PLAN.md`
+
+Read these before making product, UX, architecture, schema, or release changes.
+
 ## MVP Wedge
 
 The current build proves the first workflow:
@@ -54,6 +67,7 @@ Completed step notes:
 - `docs/STEP_007_5_UI_DIRECTION_CORRECTION.md`
 - `docs/STEP_007_6_CLEAN_UI_MOTION_DIRECTION.md`
 - `docs/STEP_007_7_PORTFOLIO_PRODUCT_MODEL_HCI_REVIEW.md`
+- `docs/STEP_007_8_PRODUCT_ENGINEERING_DOCUMENTATION_FOUNDATION.md`
 
 ## Local Development
 
