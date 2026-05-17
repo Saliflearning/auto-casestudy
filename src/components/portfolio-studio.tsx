@@ -241,18 +241,18 @@ export function PortfolioStudio() {
   const workspaceView = {
     ingest: (
       <ViewShell
-        eyebrow="Start here"
-        title="Upload evidence. Build the portfolio from there."
-        detail="This is the only first task: add source material, then let the studio organize it."
+        eyebrow="Inbox"
+        title="Upload evidence"
+        detail="Add project files. The studio will sort them next."
       >
         <IngestionPanel onFiles={onFiles} onDropFiles={uploadFiles} isUploading={isUploading} uploadError={uploadError} uploadSuccess={uploadSuccess} />
       </ViewShell>
     ),
     intelligence: (
       <ViewShell
-        eyebrow="Evidence review"
-        title="Check what the system found"
-        detail="Review artifact status, clusters, and source links before any stronger agent reasoning."
+        eyebrow="Review"
+        title="Evidence found"
+        detail="Confirm files, gaps, and project groups."
       >
         <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
           <div className="space-y-6">
@@ -271,9 +271,9 @@ export function PortfolioStudio() {
     ),
     strategy: (
       <ViewShell
-        eyebrow="Portfolio structure"
-        title="Shape the website model"
-        detail="Set the target persona, audience mode, theme, and page structure."
+        eyebrow="Strategy"
+        title="Portfolio structure"
+        detail="Choose the audience and pages."
       >
         <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
           <div className="space-y-6">
@@ -294,9 +294,9 @@ export function PortfolioStudio() {
     ),
     editor: (
       <ViewShell
-        eyebrow="Portfolio editor"
-        title="Edit the generated story"
-        detail="Rewrite sections, protect content, and reorder the draft."
+        eyebrow="Editor"
+        title="Edit story"
+        detail="Rewrite, lock, and reorder sections."
       >
         <EditorPanel
           sections={sections}
@@ -315,8 +315,8 @@ export function PortfolioStudio() {
     preview: (
       <ViewShell
         eyebrow="Live preview"
-        title="See the portfolio as a site"
-        detail="Preview the full portfolio output without editing controls in the way."
+        title="Portfolio preview"
+        detail="Check the public-facing site."
       >
         <PortfolioPreview persona={persona} mode={audienceMode} theme={theme} sections={sections} artifacts={artifacts} />
       </ViewShell>
@@ -324,8 +324,8 @@ export function PortfolioStudio() {
     export: (
       <ViewShell
         eyebrow="Publish"
-        title="Prepare the hostable package"
-        detail="Resolve evidence gaps before packaging portfolio pages."
+        title="Publish package"
+        detail="Fix gaps before export."
       >
         <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
           <ExportPanel evidenceCoverage={evidenceScore.coverage} gaps={gaps.length} />
@@ -470,85 +470,33 @@ function ViewShell({
 }) {
   return (
     <section className="space-y-6">
-      <div className="rounded-lg border border-line bg-panel/70 p-5 shadow-soft sm:p-6">
+      <div className="rounded-lg border border-line bg-panel/60 p-4 shadow-soft sm:p-5">
         <p className="text-xs uppercase tracking-[0.18em] text-primary">{eyebrow}</p>
-        <h2 className="mt-2 text-2xl font-semibold tracking-tight text-ink sm:text-3xl">{title}</h2>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">{detail}</p>
+        <h2 className="mt-1.5 text-2xl font-semibold tracking-tight text-ink sm:text-3xl">{title}</h2>
+        <p className="mt-1.5 max-w-2xl text-sm leading-6 text-muted">{detail}</p>
       </div>
       {children}
     </section>
   );
 }
 
-function Hero() {
-  return (
-    <section className="animate-soft-in rounded-lg border border-line bg-panel/70 p-7 shadow-soft sm:p-9">
-      <div className="max-w-4xl">
-        <h2 className="max-w-4xl break-words text-4xl font-bold tracking-tight text-ink sm:text-5xl">
-          Turn messy career evidence into a publishable portfolio.
-        </h2>
-        <p className="mt-4 max-w-2xl text-base leading-8 text-muted">
-          Upload your artifacts. Auto-CaseStudy organizes them into editable portfolio stories.
-        </p>
-      </div>
-      <div className="mt-7 flex flex-wrap gap-3">
-        <a href="#ingest" className="inline-flex min-h-11 items-center gap-2 rounded-md bg-primary px-4 font-semibold text-slateInk transition hover:bg-primary/90">
-          Upload artifacts <Upload className="h-4 w-4" aria-hidden />
-        </a>
-        <a href="#how-it-works" className="inline-flex min-h-11 items-center gap-2 rounded-md border border-line px-4 font-semibold text-ink transition hover:bg-panelHigh">
-          Learn how it works <ArrowRight className="h-4 w-4" aria-hidden />
-        </a>
-      </div>
-    </section>
-  );
-}
-
-function Metric({ label, value, detail }: { label: string; value: string; detail: string }) {
-  return (
-    <div className="rounded-lg border border-line bg-surface p-4">
-      <p className="text-xs uppercase tracking-[0.18em] text-muted">{label}</p>
-      <p className="mt-2 text-3xl font-bold text-primary">{value}</p>
-      <p className="mt-2 text-sm leading-6 text-muted">{detail}</p>
-    </div>
-  );
-}
-
-function WorkflowRail() {
-  return (
-    <section id="how-it-works" className="grid gap-3 md:grid-cols-4" aria-label="Simple workflow">
-      {[
-        ["1", "Upload", "Add your evidence."],
-        ["2", "Organize", "Group by project."],
-        ["3", "Generate", "Draft the story."],
-        ["4", "Publish", "Share the portfolio."]
-      ].map(([number, title, detail]) => (
-        <div key={number} className="workflow-card rounded-lg border border-line bg-surface p-4 transition duration-200 hover:-translate-y-1 hover:border-primary/30 hover:bg-panel">
-          <div className="mb-4 flex h-8 w-8 items-center justify-center rounded-md bg-primary/15 text-sm font-bold text-primary">{number}</div>
-          <h3 className="font-semibold">{title}</h3>
-          <p className="mt-2 text-sm leading-6 text-muted">{detail}</p>
-        </div>
-      ))}
-    </section>
-  );
-}
-
 function PortfolioPageTree({ artifacts, sections }: { artifacts: Artifact[]; sections: CaseStudySection[] }) {
   const pages = [
-    ["Home", "Profile hero and positioning", "Ready"],
-    ["About", "Persona, background, and credibility", "Draft"],
-    ["Projects", `${Math.max(1, sections.length - 2)} project story candidates`, "Draft"],
-    ["Case Studies", "Evidence-backed project narratives", sections.some((section) => section.evidenceIds.length === 0) ? "Needs evidence" : "Ready"],
-    ["Resume", "Experience and skills summary", artifacts.some((artifact) => artifact.classification?.classification === "resume/profile") ? "Ready" : "Needs source"],
-    ["Skills", "Tools, methods, and technical proof", "Draft"],
-    ["Contact", "Share and recruiter handoff", "Draft"]
+    ["Home", "Positioning", "Ready"],
+    ["About", "Profile", "Draft"],
+    ["Projects", `${Math.max(1, sections.length - 2)} candidates`, "Draft"],
+    ["Case Studies", "Narratives", sections.some((section) => section.evidenceIds.length === 0) ? "Needs evidence" : "Ready"],
+    ["Resume", "Experience", artifacts.some((artifact) => artifact.classification?.classification === "resume/profile") ? "Ready" : "Needs source"],
+    ["Skills", "Tools", "Draft"],
+    ["Contact", "Handoff", "Draft"]
   ];
 
   return (
     <section className="rounded-lg border border-line bg-surface p-5" aria-label="Portfolio site structure">
       <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-xs uppercase tracking-[0.18em] text-primary">Portfolio website model</p>
-          <h2 className="mt-2 text-2xl font-semibold">Pages the agent is assembling</h2>
+          <p className="text-xs uppercase tracking-[0.18em] text-primary">Site map</p>
+          <h2 className="mt-2 text-2xl font-semibold">Portfolio pages</h2>
         </div>
         <span className="rounded-full border border-line bg-panel px-3 py-1 text-sm text-muted">
           {artifacts.length} source artifacts
@@ -584,8 +532,8 @@ function CognitionPanel() {
     <section className="rounded-lg border border-line bg-surface p-5" aria-label="Professional cognition modes">
       <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-xs uppercase tracking-[0.18em] text-primary">Professional cognition layer</p>
-          <h2 className="mt-2 text-2xl font-semibold">Different experts read evidence differently</h2>
+          <p className="text-xs uppercase tracking-[0.18em] text-primary">Role lenses</p>
+          <h2 className="mt-2 text-2xl font-semibold">How the studio reviews work</h2>
         </div>
         <span className="inline-flex min-h-11 items-center gap-2 rounded-md border border-primary/25 bg-primary/10 px-3 text-sm font-semibold text-primary">
           <Network className="h-4 w-4" aria-hidden />
@@ -596,10 +544,7 @@ function CognitionPanel() {
         {cognitionModes.map((mode) => (
           <article key={mode.agent} className="rounded-md border border-line bg-panel p-4">
             <h3 className="font-semibold text-ink">{mode.agent}</h3>
-            <p className="mt-2 text-xs uppercase tracking-[0.16em] text-muted">Reads</p>
-            <p className="mt-1 text-sm leading-6 text-muted">{mode.reads}</p>
-            <p className="mt-3 text-xs uppercase tracking-[0.16em] text-muted">Finds</p>
-            <p className="mt-1 text-sm leading-6 text-muted">{mode.sees}</p>
+            <p className="mt-2 text-sm leading-6 text-muted">{mode.question}</p>
           </article>
         ))}
       </div>
@@ -645,7 +590,7 @@ function IngestionPanel({
   return (
     <section id="ingest" className="animate-soft-in-delay rounded-lg border border-primary/25 bg-surface p-5 shadow-glow sm:p-7">
       <div>
-          <p className="text-xs uppercase tracking-[0.18em] text-primary">Start here</p>
+          <p className="text-xs uppercase tracking-[0.18em] text-primary">Inbox</p>
           <h2 className="mt-2 text-3xl font-semibold">Upload evidence</h2>
           <label
             onDragEnter={onDrag}
@@ -678,7 +623,7 @@ function IngestionPanel({
               disabled={isUploading}
             />
           </label>
-          <p className="mt-3 text-xs leading-5 text-faint">Recent files and parser status appear in Review.</p>
+          <p className="mt-3 text-xs leading-5 text-faint">Parser status appears in Review.</p>
       </div>
       {uploadError ? (
         <p className="mt-4 rounded-md border border-danger/25 bg-danger/10 p-3 text-sm text-danger" role="alert">
@@ -691,51 +636,6 @@ function IngestionPanel({
         </p>
       ) : null}
     </section>
-  );
-}
-
-function TransformPreview() {
-  return (
-    <div className="rounded-lg border border-line bg-background p-4">
-      <p className="text-xs uppercase tracking-[0.16em] text-muted">Live preview</p>
-      <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
-        <div className="rounded-md border border-line bg-panel p-3">
-          <p className="text-sm font-semibold">Messy upload</p>
-          {["InterviewNotes.pdf", "wireframe-final.png", "Research slides.pptx"].map((item) => (
-            <p key={item} className="mt-2 rounded border border-line bg-background px-2 py-1 text-xs text-muted">{item}</p>
-          ))}
-        </div>
-        <ArrowRight className="transform-line hidden h-5 w-5 text-primary sm:block" aria-hidden />
-        <div className="rounded-md border border-primary/25 bg-primary/10 p-3">
-          <p className="text-sm font-semibold text-primary">Portfolio page</p>
-          <div className="mt-3 space-y-2">
-            <div className="h-2 rounded bg-primary/60" />
-            <div className="h-2 w-4/5 rounded bg-primary/30" />
-            <div className="h-2 w-3/5 rounded bg-primary/20" />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function SamplePortfolioCard() {
-  return (
-    <div className="rounded-lg border border-line bg-panel p-4 transition duration-200 hover:-translate-y-1 hover:border-primary/30">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs uppercase tracking-[0.16em] text-primary">Example output</p>
-          <h3 className="mt-2 text-lg font-semibold">Mobile onboarding redesign</h3>
-        </div>
-        <span className="rounded-full bg-emerald/15 px-2.5 py-1 text-xs font-semibold text-emerald">Editable</span>
-      </div>
-      <p className="mt-3 text-sm leading-6 text-muted">Problem, role, research evidence, design decisions, and outcome are shaped into a recruiter-ready story.</p>
-      <div className="mt-4 grid grid-cols-3 gap-2">
-        {["Research", "Design", "Outcome"].map((item) => (
-          <span key={item} className="rounded-md border border-line bg-background px-2 py-2 text-center text-xs text-muted">{item}</span>
-        ))}
-      </div>
-    </div>
   );
 }
 
@@ -753,94 +653,46 @@ function AgentIntelligence({
       <div className="rounded-lg border border-line bg-surface p-5">
         <div className="mb-5 flex items-center justify-between gap-3">
           <div>
-            <p className="text-xs uppercase tracking-[0.18em] text-primary">After upload</p>
-            <h2 className="mt-2 text-2xl font-semibold">Artifact review</h2>
+            <p className="text-xs uppercase tracking-[0.18em] text-primary">Files</p>
+            <h2 className="mt-2 text-2xl font-semibold">Artifact tray</h2>
           </div>
           <BadgeCheck className="h-6 w-6 text-emerald" aria-label="Evidence checked" />
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] text-left text-sm">
-            <thead className="text-xs uppercase tracking-[0.12em] text-muted">
-              <tr className="border-b border-line">
-                <th className="py-3 pr-4 font-semibold">Artifact</th>
-                <th className="py-3 pr-4 font-semibold">Type</th>
-                <th className="py-3 pr-4 font-semibold">Status</th>
-                <th className="py-3 pr-4 font-semibold">Phase</th>
-                <th className="py-3 pr-4 font-semibold">Source signals</th>
-                <th className="py-3 pr-4 font-semibold">Placement</th>
-              </tr>
-            </thead>
-            <tbody>
-              {artifacts.map((artifact) => (
-                <tr key={artifact.id} className="border-b border-line/70">
-                  <td className="py-3 pr-4">
-                    <p className="font-medium text-ink">{artifact.name}</p>
-                    <p className="mt-1 text-xs text-muted">{artifact.extractedSignals.join(" • ")}</p>
-                    {artifact.sizeBytes ? (
-                      <p className="mt-1 text-xs text-faint">
-                        {(artifact.sizeBytes / 1024).toFixed(1)} KB · {artifact.mimeType}
-                      </p>
-                    ) : null}
-                    {artifact.extractedContent ? (
-                      <div className="mt-3 max-w-2xl rounded-md border border-line bg-background p-3">
-                        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">
-                          Extracted preview · {artifact.extractedContent.parser}
-                        </p>
-                        <p className="mt-2 line-clamp-3 text-xs leading-5 text-muted">
-                          {artifact.extractedContent.text}
-                        </p>
-                      </div>
-                    ) : null}
-                    {artifact.classification ? (
-                      <div className="mt-3 max-w-2xl rounded-md border border-primary/20 bg-primary/10 p-3">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="rounded-full bg-primary px-2.5 py-1 text-xs font-semibold text-slateInk">
-                            {artifact.classification.classification}
-                          </span>
-                          <span className="text-xs text-primary">
-                            Source signal strength: {artifact.classification.confidenceScore}%
-                          </span>
-                        </div>
-                        <div className="mt-3 grid gap-2 text-xs text-muted sm:grid-cols-2">
-                          <p><span className="text-faint">Project:</span> {artifact.classification.projectName ?? "Unknown"}</p>
-                          <p><span className="text-faint">Course/job:</span> {artifact.classification.courseOrJob ?? "Unknown"}</p>
-                        </div>
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          {artifact.classification.tags.slice(0, 8).map((tag) => (
-                            <span key={tag} className="rounded-full border border-line bg-background px-2 py-1 text-xs text-muted">
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    ) : null}
-                    {artifact.parserError ? (
-                      <p className="mt-2 rounded-md border border-danger/25 bg-danger/10 p-2 text-xs text-danger">
-                        Parser failed: {artifact.parserError}
-                      </p>
-                    ) : null}
-                  </td>
-                  <td className="py-3 pr-4 text-muted">{artifact.kind}</td>
-                  <td className="py-3 pr-4">
-                    <span className={cn("rounded-full border px-2.5 py-1 text-xs", artifact.status === "Parsed" ? "border-emerald/30 bg-emerald/10 text-emerald" : artifact.status === "Failed" ? "border-danger/30 bg-danger/10 text-danger" : "border-line bg-background text-muted")}>
-                      {artifact.status ?? "Demo"}
-                    </span>
-                  </td>
-                  <td className="py-3 pr-4 text-muted">{artifact.phase}</td>
-                  <td className="py-3 pr-4">
-                    <span className={cn("rounded-full px-2.5 py-1 text-xs font-semibold", artifact.confidence === "High" ? "bg-emerald/15 text-emerald" : artifact.confidence === "Medium" ? "bg-amber/15 text-amber" : "bg-danger/15 text-danger")}>
-                      {artifact.confidence} signal
-                    </span>
-                  </td>
-                  <td className="py-3 pr-4 text-muted">{artifact.suggestedPlacement}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="grid gap-3 md:grid-cols-2">
+          {artifacts.map((artifact) => (
+            <article key={artifact.id} className="rounded-md border border-line bg-panel p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h3 className="truncate text-sm font-semibold text-ink">{artifact.name}</h3>
+                  <p className="mt-1 text-xs text-muted">{artifact.classification?.classification ?? artifact.kind}</p>
+                </div>
+                <span className={cn("shrink-0 rounded-full border px-2.5 py-1 text-xs", artifact.status === "Parsed" ? "border-emerald/30 bg-emerald/10 text-emerald" : artifact.status === "Failed" ? "border-danger/30 bg-danger/10 text-danger" : "border-line bg-background text-muted")}>
+                  {artifact.status ?? "Demo"}
+                </span>
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className="rounded-full border border-line bg-background px-2 py-1 text-xs text-muted">{artifact.phase}</span>
+                <span className={cn("rounded-full px-2 py-1 text-xs font-semibold", artifact.confidence === "High" ? "bg-emerald/15 text-emerald" : artifact.confidence === "Medium" ? "bg-amber/15 text-amber" : "bg-danger/15 text-danger")}>
+                  {artifact.confidence}
+                </span>
+                {artifact.classification?.projectName ? (
+                  <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-1 text-xs text-primary">
+                    {artifact.classification.projectName}
+                  </span>
+                ) : null}
+              </div>
+              {artifact.extractedContent ? (
+                <p className="mt-3 line-clamp-2 text-xs leading-5 text-muted">{artifact.extractedContent.text}</p>
+              ) : null}
+              {artifact.parserError ? (
+                <p className="mt-3 rounded-md border border-danger/25 bg-danger/10 p-2 text-xs text-danger">{artifact.parserError}</p>
+              ) : null}
+            </article>
+          ))}
         </div>
       </div>
       <div className="rounded-lg border border-line bg-surface p-5">
-        <p className="text-xs uppercase tracking-[0.18em] text-primary">Agent log</p>
+        <p className="text-xs uppercase tracking-[0.18em] text-primary">Status</p>
         <p className="mt-3 rounded-md border border-primary/20 bg-primary/10 p-3 text-sm leading-6 text-primary">{lastAgentAction}</p>
         <div className="mt-5 space-y-3">
           {gaps.slice(0, 4).map((gap) => (
@@ -930,11 +782,8 @@ function EvidenceMapPanel({
     <section className="rounded-lg border border-line bg-surface p-5" aria-label="Evidence map review">
       <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-xs uppercase tracking-[0.18em] text-primary">Structured relationship mapping</p>
-          <h2 className="mt-2 text-2xl font-semibold">Project cluster review</h2>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
-            Deterministic matching groups artifacts by shared project clues, course/job, tools, dates, and support relationships. This is still structured mapping, not agent reasoning.
-          </p>
+          <p className="text-xs uppercase tracking-[0.18em] text-primary">Projects</p>
+          <h2 className="mt-2 text-2xl font-semibold">Confirm groups</h2>
         </div>
         <span className="rounded-full border border-line bg-panel px-3 py-1 text-sm text-muted">
           {relationships.length} relationship edge{relationships.length === 1 ? "" : "s"}
@@ -1059,7 +908,7 @@ function EvidenceMapPanel({
         </div>
       ) : (
         <div className="rounded-md border border-line bg-panel p-4 text-sm leading-6 text-muted">
-          Upload and classify artifacts to create project cluster candidates. Stronger relationship edges appear when two or more artifacts share clues.
+          Upload files to create project candidates.
         </div>
       )}
     </section>
@@ -1093,8 +942,8 @@ function EditorPanel({
     <section id="editor" className="rounded-lg border border-line bg-surface p-5">
       <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-xs uppercase tracking-[0.18em] text-primary">Portfolio site editor</p>
-          <h2 className="mt-2 text-2xl font-semibold">Edit pages, project stories, and evidence-backed sections</h2>
+          <p className="text-xs uppercase tracking-[0.18em] text-primary">Editor</p>
+          <h2 className="mt-2 text-2xl font-semibold">Edit case study</h2>
         </div>
         <button onClick={onRegenerate} className="inline-flex min-h-11 items-center gap-2 rounded-md border border-line px-4 font-semibold text-ink transition hover:bg-panelHigh">
           <WandSparkles className="h-4 w-4" aria-hidden />
@@ -1108,7 +957,7 @@ function EditorPanel({
           id="ai-command"
           value={prompt}
           onChange={(event) => onPrompt(event.target.value)}
-          placeholder="Try: make this recruiter-friendly, more academic, or more technical"
+          placeholder="Ask for recruiter, academic, or technical tone"
           className="min-h-11 flex-1 rounded-md border border-line bg-background px-3 text-sm text-ink placeholder:text-faint"
         />
         <button className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-primary px-4 font-semibold text-slateInk transition hover:bg-primary/90">
@@ -1270,9 +1119,8 @@ function StrategyPanel({
 function ProvenancePanel() {
   return (
     <section className="rounded-lg border border-line bg-surface p-5">
-      <p className="text-xs uppercase tracking-[0.18em] text-primary">Evidence & trust</p>
-      <h2 className="mt-2 text-xl font-semibold">No claim without evidence</h2>
-      <p className="mt-2 text-sm leading-6 text-muted">Every generated section should link back to source artifacts.</p>
+      <p className="text-xs uppercase tracking-[0.18em] text-primary">Trust</p>
+      <h2 className="mt-2 text-xl font-semibold">Source links</h2>
       <div className="mt-4 space-y-3">
         {provenanceLinks.map(([source, target, relation]) => (
           <div key={`${source}-${target}`} className="rounded-md border border-line bg-panel p-3">
@@ -1316,7 +1164,7 @@ function PortfolioPreview({
     <section id="preview" className={cn("rounded-lg border p-5", light ? "border-slate-200 bg-paper text-slateInk" : "border-line bg-surface text-ink")}>
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className={cn("text-xs uppercase tracking-[0.18em]", light ? "text-slate-500" : "text-primary")}>Live portfolio preview</p>
+        <p className={cn("text-xs uppercase tracking-[0.18em]", light ? "text-slate-500" : "text-primary")}>Preview</p>
           <h2 className="mt-2 text-xl font-semibold">{persona}</h2>
         </div>
         <span className={cn("rounded-full px-2.5 py-1 text-xs font-semibold", light ? "bg-slate-900 text-white" : "bg-primary text-slateInk")}>{mode}</span>
@@ -1339,10 +1187,8 @@ function PortfolioPreview({
           </article>
         ))}
       </div>
-      <div className={cn("mt-5 grid gap-2 rounded-md border p-3 text-xs", light ? "border-slate-200 bg-slate-50 text-slate-600" : "border-line bg-background text-muted")}>
-        <p className="font-semibold">Ready-to-host package</p>
-        <p>Home, about, case studies, skills, technical projects, resume summary, SEO/social fields, and alt-text queue.</p>
-        <p>{artifacts.length} artifacts remain linked as proof sources.</p>
+      <div className={cn("mt-5 rounded-md border p-3 text-xs", light ? "border-slate-200 bg-slate-50 text-slate-600" : "border-line bg-background text-muted")}>
+        <p>{artifacts.length} source artifacts linked.</p>
       </div>
     </section>
   );
@@ -1352,8 +1198,8 @@ function ExportPanel({ evidenceCoverage, gaps }: { evidenceCoverage: number; gap
   const ready = evidenceCoverage >= 80 && gaps <= 2;
   return (
     <section id="export" className="rounded-lg border border-line bg-surface p-5">
-      <p className="text-xs uppercase tracking-[0.18em] text-primary">Publish/export hub</p>
-      <h2 className="mt-2 text-xl font-semibold">Hostable portfolio output</h2>
+      <p className="text-xs uppercase tracking-[0.18em] text-primary">Publish</p>
+      <h2 className="mt-2 text-xl font-semibold">Output</h2>
       <div className="mt-4 space-y-3">
         {[
           ["Static web export", "Generate deployable portfolio pages", MonitorUp],
@@ -1372,11 +1218,8 @@ function ExportPanel({ evidenceCoverage, gaps }: { evidenceCoverage: number; gap
       </div>
       <button className="mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-primary px-4 font-semibold text-slateInk transition hover:bg-primary/90">
         {ready ? <CheckCircle2 className="h-4 w-4" aria-hidden /> : <BriefcaseBusiness className="h-4 w-4" aria-hidden />}
-        {ready ? "Package portfolio" : "Resolve evidence gaps first"}
+        {ready ? "Package portfolio" : "Fix gaps"}
       </button>
-      <p className="mt-3 text-xs leading-5 text-muted">
-        Export is a placeholder in this MVP foundation, but the UI models the production publishing surface.
-      </p>
     </section>
   );
 }
