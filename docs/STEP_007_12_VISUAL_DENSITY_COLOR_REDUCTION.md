@@ -42,3 +42,9 @@ The studio should feel calm on the surface and intelligent underneath. Users sho
 - Convert remaining evidence and publish panels into inspector drawers.
 - Add page-level preview/canvas editing.
 - Replace text-heavy case study cards with visual section blocks and media placement.
+
+## Follow-Up Applied
+
+- The top bar now shows persona as read-only status; persona editing lives in Strategy.
+- Repeated child headers were removed from Inbox, Preview, and Publish.
+- Editor now uses outline, story canvas, and evidence inspector surfaces instead of one stacked form.

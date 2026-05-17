@@ -343,7 +343,7 @@ export function PortfolioStudio() {
       <div className="grid min-h-dvh lg:grid-cols-[272px_1fr]">
         <Sidebar activeView={activeView} onView={setActiveView} />
         <section id="workspace" className="min-w-0 overflow-x-hidden">
-          <TopBar persona={persona} activeLabel={activeWorkflowItem.label} onPersona={setPersona} onReset={resetDemo} />
+          <TopBar persona={persona} activeLabel={activeWorkflowItem.label} onReset={resetDemo} />
           <div className="mx-auto flex w-full max-w-[1480px] flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
             <MobileViewTabs activeView={activeView} onView={setActiveView} />
             {workspaceView[activeView]}
@@ -393,12 +393,10 @@ function Sidebar({ activeView, onView }: { activeView: StudioView; onView: (view
 function TopBar({
   persona,
   activeLabel,
-  onPersona,
   onReset
 }: {
   persona: Persona;
   activeLabel: string;
-  onPersona: (persona: Persona) => void;
   onReset: () => void;
 }) {
   return (
@@ -409,17 +407,9 @@ function TopBar({
           <h1 className="text-xl font-semibold tracking-tight">{activeLabel}</h1>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <label className="sr-only" htmlFor="persona-select">Persona</label>
-          <select
-            id="persona-select"
-            value={persona}
-            onChange={(event) => onPersona(event.target.value as Persona)}
-            className="min-h-11 rounded-md border border-line bg-panel px-3 text-sm text-ink"
-          >
-            {personas.map((item) => (
-              <option key={item}>{item}</option>
-            ))}
-          </select>
+          <span className="inline-flex min-h-11 items-center rounded-md border border-line bg-panel px-3 text-sm text-muted">
+            {persona}
+          </span>
           <button
             onClick={onReset}
             className="inline-flex min-h-11 items-center gap-2 rounded-md border border-line px-3 text-sm text-muted transition hover:bg-panel hover:text-ink"
@@ -470,7 +460,7 @@ function ViewShell({
 }) {
   return (
     <section className="space-y-6">
-      <div className="rounded-lg border border-line bg-panel/60 p-4 shadow-soft sm:p-5">
+      <div className="px-1">
         <p className="text-xs uppercase tracking-[0.18em] text-primary">{eyebrow}</p>
         <h2 className="mt-1.5 text-2xl font-semibold tracking-tight text-ink sm:text-3xl">{title}</h2>
         <p className="mt-1.5 max-w-2xl text-sm leading-6 text-muted">{detail}</p>
@@ -590,8 +580,6 @@ function IngestionPanel({
   return (
     <section id="ingest" className="animate-soft-in-delay rounded-lg border border-primary/25 bg-surface p-5 shadow-glow sm:p-7">
       <div>
-          <p className="text-xs uppercase tracking-[0.18em] text-primary">Inbox</p>
-          <h2 className="mt-2 text-3xl font-semibold">Upload evidence</h2>
           <label
             onDragEnter={onDrag}
             onDragOver={onDrag}
@@ -938,20 +926,12 @@ function EditorPanel({
   onUpdateSection: (id: string, content: string) => void;
   onRegenerate: () => void;
 }) {
-  return (
-    <section id="editor" className="rounded-lg border border-line bg-surface p-5">
-      <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <p className="text-xs uppercase tracking-[0.18em] text-primary">Editor</p>
-          <h2 className="mt-2 text-2xl font-semibold">Edit case study</h2>
-        </div>
-        <button onClick={onRegenerate} className="inline-flex min-h-11 items-center gap-2 rounded-md border border-line px-4 font-semibold text-ink transition hover:bg-panelHigh">
-          <WandSparkles className="h-4 w-4" aria-hidden />
-          Regenerate draft
-        </button>
-      </div>
+  const [selectedSectionId, setSelectedSectionId] = useState(sections[0]?.id ?? "");
+  const selectedSection = sections.find((section) => section.id === selectedSectionId) ?? sections[0];
 
-      <form onSubmit={onPromptSubmit} className="mb-5 flex flex-col gap-3 rounded-lg border border-primary/20 bg-primary/10 p-3 sm:flex-row">
+  return (
+    <section id="editor" className="space-y-4">
+      <form onSubmit={onPromptSubmit} className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-3 sm:flex-row">
         <label className="sr-only" htmlFor="ai-command">AI edit command</label>
         <input
           id="ai-command"
@@ -965,21 +945,64 @@ function EditorPanel({
         </button>
       </form>
 
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-        <SortableContext items={sections.map((section) => section.id)} strategy={verticalListSortingStrategy}>
-          <div className="space-y-3">
-            {sections.map((section) => (
-              <SortableSection
+      <div className="grid gap-4 xl:grid-cols-[220px_1fr_300px]">
+        <aside className="rounded-lg border border-line bg-surface p-4" aria-label="Case study outline">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <p className="text-xs uppercase tracking-[0.18em] text-primary">Outline</p>
+            <button onClick={onRegenerate} className="inline-flex min-h-9 items-center gap-2 rounded-md border border-line px-2 text-xs font-semibold text-muted transition hover:bg-panelHigh hover:text-ink">
+              <WandSparkles className="h-3.5 w-3.5" aria-hidden />
+              Draft
+            </button>
+          </div>
+          <div className="space-y-2">
+            {sections.map((section, index) => (
+              <button
                 key={section.id}
-                section={section}
-                artifacts={artifacts}
-                onToggleLock={onToggleLock}
-                onUpdateSection={onUpdateSection}
-              />
+                type="button"
+                onClick={() => setSelectedSectionId(section.id)}
+                className={cn(
+                  "flex min-h-11 w-full items-center justify-between gap-3 rounded-md border px-3 text-left text-sm transition",
+                  selectedSection?.id === section.id ? "border-primary/40 bg-primary/10 text-ink" : "border-line bg-panel text-muted hover:text-ink"
+                )}
+              >
+                <span className="truncate">{index + 1}. {section.title}</span>
+                {section.locked ? <Lock className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden /> : null}
+              </button>
             ))}
           </div>
-        </SortableContext>
-      </DndContext>
+        </aside>
+
+        <div className="rounded-lg border border-line bg-surface p-4">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4">
+            <div>
+              <p className="text-xs uppercase tracking-[0.18em] text-primary">Case study canvas</p>
+              <h3 className="mt-1 text-xl font-semibold">Portfolio story draft</h3>
+            </div>
+            <span className="rounded-full border border-line bg-panel px-3 py-1 text-xs text-muted">
+              {sections.length} sections
+            </span>
+          </div>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+            <SortableContext items={sections.map((section) => section.id)} strategy={verticalListSortingStrategy}>
+              <div className="space-y-3">
+                {sections.map((section) => (
+                  <SortableSection
+                    key={section.id}
+                    section={section}
+                    artifacts={artifacts}
+                    active={selectedSection?.id === section.id}
+                    onSelect={() => setSelectedSectionId(section.id)}
+                    onToggleLock={onToggleLock}
+                    onUpdateSection={onUpdateSection}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
+        </div>
+
+        <EvidenceInspector section={selectedSection} artifacts={artifacts} />
+      </div>
     </section>
   );
 }
@@ -987,11 +1010,15 @@ function EditorPanel({
 function SortableSection({
   section,
   artifacts,
+  active,
+  onSelect,
   onToggleLock,
   onUpdateSection
 }: {
   section: CaseStudySection;
   artifacts: Artifact[];
+  active: boolean;
+  onSelect: () => void;
   onToggleLock: (id: string) => void;
   onUpdateSection: (id: string, content: string) => void;
 }) {
@@ -1002,7 +1029,12 @@ function SortableSection({
     <article
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={cn("rounded-lg border border-line bg-panel p-4", isDragging && "border-primary shadow-glow")}
+      onClick={onSelect}
+      className={cn(
+        "rounded-lg border bg-panel p-4 transition",
+        active ? "border-primary/50 shadow-glow" : "border-line",
+        isDragging && "border-primary shadow-glow"
+      )}
     >
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
@@ -1034,7 +1066,7 @@ function SortableSection({
         onChange={(event) => onUpdateSection(section.id, event.target.value)}
         disabled={section.locked}
         className={cn(
-          "min-h-[116px] w-full resize-y rounded-md border border-line bg-background p-3 text-sm leading-6 text-ink",
+          "min-h-[108px] w-full resize-y rounded-md border border-line bg-background/80 p-4 text-sm leading-7 text-ink",
           section.locked && "cursor-not-allowed opacity-70"
         )}
       />
@@ -1054,6 +1086,45 @@ function SortableSection({
         )}
       </div>
     </article>
+  );
+}
+
+function EvidenceInspector({ section, artifacts }: { section?: CaseStudySection; artifacts: Artifact[] }) {
+  const evidence = section ? artifacts.filter((artifact) => section.evidenceIds.includes(artifact.id)) : [];
+
+  return (
+    <aside className="rounded-lg border border-line bg-surface p-4" aria-label="Evidence inspector">
+      <p className="text-xs uppercase tracking-[0.18em] text-primary">Evidence</p>
+      <h3 className="mt-1 text-lg font-semibold">{section?.title ?? "Select a section"}</h3>
+      {evidence.length ? (
+        <div className="mt-4 space-y-3">
+          {evidence.map((artifact) => (
+            <article key={artifact.id} className="rounded-md border border-line bg-panel p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-ink">{artifact.sourceLabel}</p>
+                  <p className="mt-1 text-xs text-muted">{artifact.classification?.classification ?? artifact.kind}</p>
+                </div>
+                <span className={cn("rounded-full px-2 py-1 text-xs font-semibold", artifact.confidence === "High" ? "bg-emerald/15 text-emerald" : artifact.confidence === "Medium" ? "bg-amber/15 text-amber" : "bg-danger/15 text-danger")}>
+                  {artifact.confidence}
+                </span>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {artifact.extractedSignals.slice(0, 3).map((signal) => (
+                  <span key={signal} className="rounded-full border border-line bg-background px-2 py-1 text-xs text-muted">
+                    {signal}
+                  </span>
+                ))}
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <div className="mt-4 rounded-md border border-danger/25 bg-danger/10 p-3 text-sm text-danger">
+          No evidence linked.
+        </div>
+      )}
+    </aside>
   );
 }
 
@@ -1164,7 +1235,6 @@ function PortfolioPreview({
     <section id="preview" className={cn("rounded-lg border p-5", light ? "border-slate-200 bg-paper text-slateInk" : "border-line bg-surface text-ink")}>
       <div className="flex items-start justify-between gap-4">
         <div>
-        <p className={cn("text-xs uppercase tracking-[0.18em]", light ? "text-slate-500" : "text-primary")}>Preview</p>
           <h2 className="mt-2 text-xl font-semibold">{persona}</h2>
         </div>
         <span className={cn("rounded-full px-2.5 py-1 text-xs font-semibold", light ? "bg-slate-900 text-white" : "bg-primary text-slateInk")}>{mode}</span>
@@ -1198,8 +1268,6 @@ function ExportPanel({ evidenceCoverage, gaps }: { evidenceCoverage: number; gap
   const ready = evidenceCoverage >= 80 && gaps <= 2;
   return (
     <section id="export" className="rounded-lg border border-line bg-surface p-5">
-      <p className="text-xs uppercase tracking-[0.18em] text-primary">Publish</p>
-      <h2 className="mt-2 text-xl font-semibold">Output</h2>
       <div className="mt-4 space-y-3">
         {[
           ["Static web export", "Generate deployable portfolio pages", MonitorUp],
