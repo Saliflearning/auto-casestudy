@@ -46,7 +46,7 @@ import {
   UserRoundCheck,
   WandSparkles
 } from "lucide-react";
-import { ChangeEvent, DragEvent, FormEvent, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, DragEvent, FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Artifact, ArtifactRelationship, CaseStudySection, Persona, PortfolioTheme, ProjectCluster } from "@/lib/types";
 import { useGaps, usePortfolioStore } from "@/store/use-portfolio-store";
@@ -64,13 +64,15 @@ const personas: Persona[] = [
 const themes: PortfolioTheme[] = ["Instrument Dark", "Editorial Light", "Recruiter Clean"];
 
 const workflow = [
-  { id: "ingest", label: "Ingest", icon: Upload },
-  { id: "intelligence", label: "Agent analysis", icon: BrainCircuit },
+  { id: "ingest", label: "Inbox", icon: Upload },
+  { id: "intelligence", label: "Review", icon: BrainCircuit },
   { id: "strategy", label: "Strategy", icon: SearchCheck },
   { id: "editor", label: "Editor", icon: PenLine },
   { id: "preview", label: "Preview", icon: MonitorUp },
   { id: "export", label: "Publish", icon: Download }
-];
+] as const;
+
+type StudioView = (typeof workflow)[number]["id"];
 
 function getClientWorkspaceId() {
   if (typeof window === "undefined") return "demo-workspace";
@@ -147,6 +149,7 @@ export function PortfolioStudio() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const [uploadSuccess, setUploadSuccess] = useState("");
+  const [activeView, setActiveView] = useState<StudioView>("ingest");
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
@@ -233,67 +236,117 @@ export function PortfolioStudio() {
     reorderSections(arrayMove(sections, oldIndex, newIndex).map((section) => section.id));
   }
 
+  const activeWorkflowItem = workflow.find((item) => item.id === activeView) ?? workflow[0];
+
+  const workspaceView = {
+    ingest: (
+      <ViewShell
+        eyebrow="Start here"
+        title="Upload evidence. Build the portfolio from there."
+        detail="This is the only first task: add source material, then let the studio organize it."
+      >
+        <IngestionPanel onFiles={onFiles} onDropFiles={uploadFiles} isUploading={isUploading} uploadError={uploadError} uploadSuccess={uploadSuccess} />
+      </ViewShell>
+    ),
+    intelligence: (
+      <ViewShell
+        eyebrow="Evidence review"
+        title="Check what the system found"
+        detail="Review artifact status, clusters, and source links before any stronger agent reasoning."
+      >
+        <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
+          <div className="space-y-6">
+            <AgentIntelligence artifacts={artifacts} gaps={gaps} lastAgentAction={lastAgentAction} />
+            <EvidenceMapPanel
+              artifacts={artifacts}
+              clusters={clusters}
+              relationships={relationships}
+              onClusterStatus={updateClusterStatus}
+              onClusterChange={updateCluster}
+            />
+          </div>
+          <ProvenancePanel />
+        </div>
+      </ViewShell>
+    ),
+    strategy: (
+      <ViewShell
+        eyebrow="Portfolio structure"
+        title="Shape the website model"
+        detail="Set the target persona, audience mode, theme, and page structure."
+      >
+        <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
+          <div className="space-y-6">
+            <PortfolioPageTree artifacts={artifacts} sections={sections} />
+            <CognitionPanel />
+          </div>
+          <StrategyPanel
+            persona={persona}
+            theme={theme}
+            onPersona={setPersona}
+            onTheme={setTheme}
+            audienceMode={audienceMode}
+            onAudienceMode={setAudienceMode}
+            evidenceScore={evidenceScore.coverage}
+          />
+        </div>
+      </ViewShell>
+    ),
+    editor: (
+      <ViewShell
+        eyebrow="Portfolio editor"
+        title="Edit the generated story"
+        detail="Rewrite sections, protect content, and reorder the draft."
+      >
+        <EditorPanel
+          sections={sections}
+          artifacts={artifacts}
+          prompt={prompt}
+          sensors={sensors}
+          onPrompt={setPrompt}
+          onPromptSubmit={submitPrompt}
+          onDragEnd={onDragEnd}
+          onToggleLock={toggleLock}
+          onUpdateSection={updateSection}
+          onRegenerate={regenerate}
+        />
+      </ViewShell>
+    ),
+    preview: (
+      <ViewShell
+        eyebrow="Live preview"
+        title="See the portfolio as a site"
+        detail="Preview the full portfolio output without editing controls in the way."
+      >
+        <PortfolioPreview persona={persona} mode={audienceMode} theme={theme} sections={sections} artifacts={artifacts} />
+      </ViewShell>
+    ),
+    export: (
+      <ViewShell
+        eyebrow="Publish"
+        title="Prepare the hostable package"
+        detail="Resolve evidence gaps before packaging portfolio pages."
+      >
+        <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
+          <ExportPanel evidenceCoverage={evidenceScore.coverage} gaps={gaps.length} />
+          <ProvenancePanel />
+        </div>
+      </ViewShell>
+    )
+  } satisfies Record<StudioView, JSX.Element>;
+
   return (
     <main className="min-h-dvh overflow-x-hidden">
       <a href="#workspace" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-primary focus:px-4 focus:py-3 focus:text-slateInk">
         Skip to workspace
       </a>
       <div className="grid min-h-dvh lg:grid-cols-[272px_1fr]">
-        <Sidebar />
+        <Sidebar activeView={activeView} onView={setActiveView} />
         <section id="workspace" className="min-w-0 overflow-x-hidden">
-          <TopBar persona={persona} onPersona={setPersona} onReset={resetDemo} />
-          <div className="mx-auto flex w-full max-w-[1480px] flex-col gap-10 px-4 py-8 sm:px-6 lg:px-8">
-            <Hero />
-            <IngestionPanel onFiles={onFiles} onDropFiles={uploadFiles} isUploading={isUploading} uploadError={uploadError} uploadSuccess={uploadSuccess} />
-            <WorkflowRail />
-            <PortfolioPageTree artifacts={artifacts} sections={sections} />
-
-            <section className="grid gap-8 xl:grid-cols-[1fr_380px]" aria-label="Founder demo workflow">
-              <div className="space-y-8">
-                <AgentIntelligence artifacts={artifacts} gaps={gaps} lastAgentAction={lastAgentAction} />
-                <EvidenceMapPanel
-                  artifacts={artifacts}
-                  clusters={clusters}
-                  relationships={relationships}
-                  onClusterStatus={updateClusterStatus}
-                  onClusterChange={updateCluster}
-                />
-                <CognitionPanel />
-                <EditorPanel
-                  sections={sections}
-                  artifacts={artifacts}
-                  prompt={prompt}
-                  sensors={sensors}
-                  onPrompt={setPrompt}
-                  onPromptSubmit={submitPrompt}
-                  onDragEnd={onDragEnd}
-                  onToggleLock={toggleLock}
-                  onUpdateSection={updateSection}
-                  onRegenerate={regenerate}
-                />
-              </div>
-
-              <aside className="space-y-5 xl:sticky xl:top-6 xl:self-start" aria-label="Portfolio strategy and preview">
-                <StrategyPanel
-                  persona={persona}
-                  theme={theme}
-                  onPersona={setPersona}
-                  onTheme={setTheme}
-                  audienceMode={audienceMode}
-                  onAudienceMode={setAudienceMode}
-                  evidenceScore={evidenceScore.coverage}
-                />
-                <ProvenancePanel />
-                <PortfolioPreview
-                  persona={persona}
-                  mode={audienceMode}
-                  theme={theme}
-                  sections={sections}
-                  artifacts={artifacts}
-                />
-                <ExportPanel evidenceCoverage={evidenceScore.coverage} gaps={gaps.length} />
-              </aside>
-            </section>
+          <TopBar persona={persona} activeLabel={activeWorkflowItem.label} onPersona={setPersona} onReset={resetDemo} />
+          <div className="mx-auto flex w-full max-w-[1480px] flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
+            <MobileViewTabs activeView={activeView} onView={setActiveView} />
+            {workspaceView[activeView]}
           </div>
         </section>
       </div>
@@ -301,7 +354,7 @@ export function PortfolioStudio() {
   );
 }
 
-function Sidebar() {
+function Sidebar({ activeView, onView }: { activeView: StudioView; onView: (view: StudioView) => void }) {
   return (
     <aside className="hidden border-r border-line bg-surface/90 px-5 py-6 lg:block">
       <div className="mb-8">
@@ -316,34 +369,35 @@ function Sidebar() {
         </div>
       </div>
 
-      <nav className="space-y-2" aria-label="Workflow">
+      <nav className="space-y-2" aria-label="Studio views">
         {workflow.map((item) => (
-          <a
-            href={`#${item.id}`}
+          <button
+            type="button"
+            onClick={() => onView(item.id)}
             key={item.id}
-            className="flex min-h-11 items-center gap-3 rounded-md px-3 py-2 text-sm text-muted transition hover:bg-panel hover:text-ink"
+            aria-current={activeView === item.id ? "page" : undefined}
+            className={cn(
+              "flex min-h-11 w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition",
+              activeView === item.id ? "bg-panelHigh text-ink shadow-soft" : "text-muted hover:bg-panel hover:text-ink"
+            )}
           >
             <item.icon className="h-4 w-4" aria-hidden />
             {item.label}
-          </a>
+          </button>
         ))}
       </nav>
-
-      <div className="mt-8 rounded-lg border border-line bg-panel p-4">
-        <p className="text-xs uppercase tracking-[0.18em] text-muted">Start here</p>
-        <p className="mt-3 text-xl font-semibold text-primary">Upload evidence</p>
-        <p className="mt-3 text-sm leading-6 text-muted">Documents, screenshots, research, slides, prototypes, resumes, and technical work.</p>
-      </div>
     </aside>
   );
 }
 
 function TopBar({
   persona,
+  activeLabel,
   onPersona,
   onReset
 }: {
   persona: Persona;
+  activeLabel: string;
   onPersona: (persona: Persona) => void;
   onReset: () => void;
 }) {
@@ -352,7 +406,7 @@ function TopBar({
       <div className="mx-auto flex max-w-[1480px] flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-xs uppercase tracking-[0.24em] text-primary">AI portfolio agent</p>
-          <h1 className="text-xl font-semibold tracking-tight">Portfolio evidence workspace</h1>
+          <h1 className="text-xl font-semibold tracking-tight">{activeLabel}</h1>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <label className="sr-only" htmlFor="persona-select">Persona</label>
@@ -376,6 +430,53 @@ function TopBar({
         </div>
       </div>
     </header>
+  );
+}
+
+function MobileViewTabs({ activeView, onView }: { activeView: StudioView; onView: (view: StudioView) => void }) {
+  return (
+    <nav className="-mx-4 flex gap-2 overflow-x-auto border-b border-line px-4 pb-3 lg:hidden" aria-label="Studio views">
+      {workflow.map((item) => (
+        <button
+          key={item.id}
+          type="button"
+          onClick={() => onView(item.id)}
+          aria-current={activeView === item.id ? "page" : undefined}
+          className={cn(
+            "inline-flex min-h-11 shrink-0 items-center gap-2 rounded-md border px-3 text-sm transition",
+            activeView === item.id
+              ? "border-primary/40 bg-primary/15 text-primary"
+              : "border-line bg-panel text-muted hover:text-ink"
+          )}
+        >
+          <item.icon className="h-4 w-4" aria-hidden />
+          {item.label}
+        </button>
+      ))}
+    </nav>
+  );
+}
+
+function ViewShell({
+  eyebrow,
+  title,
+  detail,
+  children
+}: {
+  eyebrow: string;
+  title: string;
+  detail: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="space-y-6">
+      <div className="rounded-lg border border-line bg-panel/70 p-5 shadow-soft sm:p-6">
+        <p className="text-xs uppercase tracking-[0.18em] text-primary">{eyebrow}</p>
+        <h2 className="mt-2 text-2xl font-semibold tracking-tight text-ink sm:text-3xl">{title}</h2>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">{detail}</p>
+      </div>
+      {children}
+    </section>
   );
 }
 
@@ -455,9 +556,8 @@ function PortfolioPageTree({ artifacts, sections }: { artifacts: Artifact[]; sec
       </div>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {pages.map(([title, detail, status]) => (
-          <a
+          <article
             key={title}
-            href={title === "Case Studies" ? "#editor" : "#preview"}
             className="rounded-md border border-line bg-panel p-4 transition duration-200 hover:-translate-y-1 hover:border-primary/30 hover:bg-panelHigh"
           >
             <div className="flex items-start justify-between gap-3">
@@ -472,7 +572,7 @@ function PortfolioPageTree({ artifacts, sections }: { artifacts: Artifact[]; sec
               </span>
             </div>
             <p className="mt-3 text-sm leading-6 text-muted">{detail}</p>
-          </a>
+          </article>
         ))}
       </div>
     </section>
@@ -544,10 +644,9 @@ function IngestionPanel({
 
   return (
     <section id="ingest" className="animate-soft-in-delay rounded-lg border border-primary/25 bg-surface p-5 shadow-glow sm:p-7">
-      <div className="grid gap-6 xl:grid-cols-[1.15fr_.85fr]">
-        <div>
+      <div>
           <p className="text-xs uppercase tracking-[0.18em] text-primary">Start here</p>
-          <h2 className="mt-2 text-3xl font-semibold">Upload your messy evidence</h2>
+          <h2 className="mt-2 text-3xl font-semibold">Upload evidence</h2>
           <label
             onDragEnter={onDrag}
             onDragOver={onDrag}
@@ -566,9 +665,7 @@ function IngestionPanel({
               <Upload className="h-6 w-6" aria-hidden />
             </span>
             <span className="mt-4 text-xl font-semibold text-ink">{isUploading ? "Uploading..." : "Drag files here or click to upload"}</span>
-            <span className="mt-2 max-w-md text-sm leading-6 text-muted">
-              PDF, DOCX, PPTX, screenshots, research notes, resumes, certificates, diagrams, and portfolio images.
-            </span>
+            <span className="mt-2 max-w-md text-sm leading-6 text-muted">PDF, DOCX, PPTX, PNG, JPG, or WebP.</span>
             <span className="mt-5 inline-flex min-h-11 items-center rounded-md bg-primary px-4 font-semibold text-slateInk">
               Choose artifacts
             </span>
@@ -581,12 +678,7 @@ function IngestionPanel({
               disabled={isUploading}
             />
           </label>
-          <p className="mt-3 text-xs leading-5 text-faint">Examples: interview notes, Figma screenshots, project reports, slide decks, final designs, cloud diagrams, resume material.</p>
-        </div>
-        <div className="grid gap-4">
-          <TransformPreview />
-          <SamplePortfolioCard />
-        </div>
+          <p className="mt-3 text-xs leading-5 text-faint">Recent files and parser status appear in Review.</p>
       </div>
       {uploadError ? (
         <p className="mt-4 rounded-md border border-danger/25 bg-danger/10 p-3 text-sm text-danger" role="alert">
