@@ -46,7 +46,7 @@ import {
   UserRoundCheck,
   WandSparkles
 } from "lucide-react";
-import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, DragEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Artifact, ArtifactRelationship, CaseStudySection, Persona, PortfolioTheme, ProjectCluster } from "@/lib/types";
 import { useGaps, usePortfolioStore } from "@/store/use-portfolio-store";
@@ -55,7 +55,7 @@ const personas: Persona[] = [
   "Technical UX Hybrid",
   "UX Researcher",
   "Product Designer",
-  "HCI Master’s Student",
+  "HCI Master's Student",
   "Cloud/IT Hybrid",
   "Product Manager",
   "Software Project Builder"
@@ -71,6 +71,16 @@ const workflow = [
   { id: "preview", label: "Preview", icon: MonitorUp },
   { id: "export", label: "Publish", icon: Download }
 ];
+
+function getClientWorkspaceId() {
+  if (typeof window === "undefined") return "demo-workspace";
+  const key = "auto-casestudy-workspace";
+  const existing = window.localStorage.getItem(key);
+  if (existing) return existing;
+  const created = `workspace_${crypto.randomUUID()}`;
+  window.localStorage.setItem(key, created);
+  return created;
+}
 
 const cognitionModes = [
   {
@@ -136,6 +146,7 @@ export function PortfolioStudio() {
   const [prompt, setPrompt] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
+  const [uploadSuccess, setUploadSuccess] = useState("");
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
@@ -153,7 +164,10 @@ export function PortfolioStudio() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/artifacts")
+    const workspaceId = getClientWorkspaceId();
+    fetch("/api/artifacts", {
+      headers: { "x-autocasestudy-workspace": workspaceId }
+    })
       .then((response) => response.json())
       .then((payload) => {
         if (!cancelled && Array.isArray(payload.artifacts)) {
@@ -169,19 +183,19 @@ export function PortfolioStudio() {
     };
   }, [setEvidenceMap, syncStoredArtifacts]);
 
-  async function onFiles(event: ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(event.target.files ?? []);
-    event.target.value = "";
+  async function uploadFiles(files: File[]) {
     if (!files.length) return;
 
     const form = new FormData();
     files.forEach((file) => form.append("files", file));
     setIsUploading(true);
     setUploadError("");
+    setUploadSuccess("");
 
     try {
       const response = await fetch("/api/artifacts", {
         method: "POST",
+        headers: { "x-autocasestudy-workspace": getClientWorkspaceId() },
         body: form
       });
       const payload = await response.json();
@@ -190,11 +204,18 @@ export function PortfolioStudio() {
       }
       addUploadedArtifacts(payload.artifacts as Artifact[]);
       if (payload.evidenceMap) setEvidenceMap(payload.evidenceMap);
+      setUploadSuccess(`${files.length} artifact${files.length === 1 ? "" : "s"} added to the portfolio workspace.`);
     } catch (error) {
       setUploadError(error instanceof Error ? error.message : "Upload failed.");
     } finally {
       setIsUploading(false);
     }
+  }
+
+  async function onFiles(event: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(event.target.files ?? []);
+    event.target.value = "";
+    await uploadFiles(files);
   }
 
   function submitPrompt(event: FormEvent<HTMLFormElement>) {
@@ -223,8 +244,9 @@ export function PortfolioStudio() {
           <TopBar persona={persona} onPersona={setPersona} onReset={resetDemo} />
           <div className="mx-auto flex w-full max-w-[1480px] flex-col gap-10 px-4 py-8 sm:px-6 lg:px-8">
             <Hero />
-            <IngestionPanel onFiles={onFiles} isUploading={isUploading} uploadError={uploadError} />
+            <IngestionPanel onFiles={onFiles} onDropFiles={uploadFiles} isUploading={isUploading} uploadError={uploadError} uploadSuccess={uploadSuccess} />
             <WorkflowRail />
+            <PortfolioPageTree artifacts={artifacts} sections={sections} />
 
             <section className="grid gap-8 xl:grid-cols-[1fr_380px]" aria-label="Founder demo workflow">
               <div className="space-y-8">
@@ -409,6 +431,54 @@ function WorkflowRail() {
   );
 }
 
+function PortfolioPageTree({ artifacts, sections }: { artifacts: Artifact[]; sections: CaseStudySection[] }) {
+  const pages = [
+    ["Home", "Profile hero and positioning", "Ready"],
+    ["About", "Persona, background, and credibility", "Draft"],
+    ["Projects", `${Math.max(1, sections.length - 2)} project story candidates`, "Draft"],
+    ["Case Studies", "Evidence-backed project narratives", sections.some((section) => section.evidenceIds.length === 0) ? "Needs evidence" : "Ready"],
+    ["Resume", "Experience and skills summary", artifacts.some((artifact) => artifact.classification?.classification === "resume/profile") ? "Ready" : "Needs source"],
+    ["Skills", "Tools, methods, and technical proof", "Draft"],
+    ["Contact", "Share and recruiter handoff", "Draft"]
+  ];
+
+  return (
+    <section className="rounded-lg border border-line bg-surface p-5" aria-label="Portfolio site structure">
+      <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="text-xs uppercase tracking-[0.18em] text-primary">Portfolio website model</p>
+          <h2 className="mt-2 text-2xl font-semibold">Pages the agent is assembling</h2>
+        </div>
+        <span className="rounded-full border border-line bg-panel px-3 py-1 text-sm text-muted">
+          {artifacts.length} source artifacts
+        </span>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {pages.map(([title, detail, status]) => (
+          <a
+            key={title}
+            href={title === "Case Studies" ? "#editor" : "#preview"}
+            className="rounded-md border border-line bg-panel p-4 transition duration-200 hover:-translate-y-1 hover:border-primary/30 hover:bg-panelHigh"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <h3 className="font-semibold text-ink">{title}</h3>
+              <span
+                className={cn(
+                  "rounded-full px-2 py-1 text-[11px] font-semibold",
+                  status === "Ready" ? "bg-emerald/15 text-emerald" : status === "Needs evidence" || status === "Needs source" ? "bg-amber/15 text-amber" : "bg-primary/10 text-primary"
+                )}
+              >
+                {status}
+              </span>
+            </div>
+            <p className="mt-3 text-sm leading-6 text-muted">{detail}</p>
+          </a>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function CognitionPanel() {
   return (
     <section className="rounded-lg border border-line bg-surface p-5" aria-label="Professional cognition modes">
@@ -439,20 +509,59 @@ function CognitionPanel() {
 
 function IngestionPanel({
   onFiles,
+  onDropFiles,
   isUploading,
-  uploadError
+  uploadError,
+  uploadSuccess
 }: {
   onFiles: (event: ChangeEvent<HTMLInputElement>) => void;
+  onDropFiles: (files: File[]) => void;
   isUploading: boolean;
   uploadError: string;
+  uploadSuccess: string;
 }) {
+  const [isDragging, setIsDragging] = useState(false);
+
+  function onDrag(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!isUploading) setIsDragging(true);
+  }
+
+  function onDragLeave(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDragging(false);
+  }
+
+  function onDrop(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDragging(false);
+    if (isUploading) return;
+    onDropFiles(Array.from(event.dataTransfer.files));
+  }
+
   return (
     <section id="ingest" className="animate-soft-in-delay rounded-lg border border-primary/25 bg-surface p-5 shadow-glow sm:p-7">
       <div className="grid gap-6 xl:grid-cols-[1.15fr_.85fr]">
         <div>
           <p className="text-xs uppercase tracking-[0.18em] text-primary">Start here</p>
           <h2 className="mt-2 text-3xl font-semibold">Upload your messy evidence</h2>
-          <label className={cn("mt-5 flex min-h-[250px] cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed p-6 text-center transition duration-200", isUploading ? "border-muted bg-panel" : "border-primary/45 bg-background hover:-translate-y-1 hover:border-primary hover:bg-panel")}>
+          <label
+            onDragEnter={onDrag}
+            onDragOver={onDrag}
+            onDragLeave={onDragLeave}
+            onDrop={onDrop}
+            className={cn(
+              "mt-5 flex min-h-[250px] cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed p-6 text-center transition duration-200",
+              isUploading
+                ? "border-muted bg-panel"
+                : isDragging
+                  ? "scale-[1.01] border-primary bg-primary/10 shadow-glow"
+                  : "border-primary/45 bg-background hover:-translate-y-1 hover:border-primary hover:bg-panel"
+            )}
+          >
             <span className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/15 text-primary">
               <Upload className="h-6 w-6" aria-hidden />
             </span>
@@ -467,7 +576,7 @@ function IngestionPanel({
               className="sr-only"
               type="file"
               multiple
-              accept=".pdf,.doc,.docx,.ppt,.pptx,.png,.jpg,.jpeg,.webp,.gif"
+              accept=".pdf,.docx,.pptx,.png,.jpg,.jpeg,.webp"
               onChange={onFiles}
               disabled={isUploading}
             />
@@ -482,6 +591,11 @@ function IngestionPanel({
       {uploadError ? (
         <p className="mt-4 rounded-md border border-danger/25 bg-danger/10 p-3 text-sm text-danger" role="alert">
           {uploadError}
+        </p>
+      ) : null}
+      {uploadSuccess ? (
+        <p className="mt-4 rounded-md border border-emerald/25 bg-emerald/10 p-3 text-sm text-emerald" role="status">
+          {uploadSuccess}
         </p>
       ) : null}
     </section>
@@ -669,15 +783,21 @@ function EvidenceMapPanel({
 }) {
   const [draftLabels, setDraftLabels] = useState<Record<string, string>>({});
   const [artifactSelections, setArtifactSelections] = useState<Record<string, string>>({});
+  const [saveError, setSaveError] = useState("");
   const artifactById = new Map(artifacts.map((artifact) => [artifact.id, artifact]));
 
   async function saveCluster(cluster: ProjectCluster) {
     onClusterChange(cluster);
-    await fetch("/api/evidence-map", {
+    const response = await fetch("/api/evidence-map", {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "x-autocasestudy-workspace": getClientWorkspaceId() },
       body: JSON.stringify({ cluster })
-    }).catch(() => undefined);
+    });
+    if (!response.ok) {
+      setSaveError("Evidence graph save failed. Refresh before trusting this cluster decision.");
+      return;
+    }
+    setSaveError("");
   }
 
   async function setStatus(cluster: ProjectCluster, status: ProjectCluster["status"]) {
@@ -728,6 +848,11 @@ function EvidenceMapPanel({
           {relationships.length} relationship edge{relationships.length === 1 ? "" : "s"}
         </span>
       </div>
+      {saveError ? (
+        <p className="mb-4 rounded-md border border-danger/25 bg-danger/10 p-3 text-sm text-danger" role="alert">
+          {saveError}
+        </p>
+      ) : null}
 
       {clusters.length ? (
         <div className="grid gap-4 lg:grid-cols-2">
@@ -966,7 +1091,11 @@ function SortableSection({
         id={`${section.id}-content`}
         value={section.content}
         onChange={(event) => onUpdateSection(section.id, event.target.value)}
-        className="min-h-[116px] w-full resize-y rounded-md border border-line bg-background p-3 text-sm leading-6 text-ink"
+        disabled={section.locked}
+        className={cn(
+          "min-h-[116px] w-full resize-y rounded-md border border-line bg-background p-3 text-sm leading-6 text-ink",
+          section.locked && "cursor-not-allowed opacity-70"
+        )}
       />
       <div className="mt-3 flex flex-wrap gap-2">
         {evidence.length ? (

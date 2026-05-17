@@ -10,21 +10,27 @@ datasource db {
 model Artifact {
   id         String   @id
   userId     String
+  workspaceId String   @default("demo-workspace")
   fileName   String
   fileType   String
   mimeType   String
   sizeBytes  Int
   storageUrl String
   storageKey String
+  storageVisibility String @default("local-dev")
   status     String
   parserError String?
   uploadedAt DateTime @default(now())
   updatedAt  DateTime @updatedAt
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   extractedContent ArtifactExtractedContent?
   classification ArtifactClassification?
   sourceRelationships ArtifactRelationship[] @relation("SourceArtifact")
   targetRelationships ArtifactRelationship[] @relation("TargetArtifact")
+  evidenceLinks EvidenceLink[]
+  parserJobs ParserJob[]
 
+  @@index([workspaceId])
   @@index([userId])
   @@index([status])
   @@index([uploadedAt])
@@ -60,13 +66,16 @@ model ArtifactClassification {
 
 model ProjectCluster {
   id              String   @id
+  workspaceId     String   @default("demo-workspace")
   label           String
   artifactIds     String[]
   reasons         String[]
   confidenceScore Int
   status          String
   createdAt       DateTime @default(now())
+  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
+  @@index([workspaceId])
   @@index([status])
 }
 
@@ -85,4 +94,176 @@ model ArtifactRelationship {
   @@index([sourceArtifactId])
   @@index([targetArtifactId])
   @@index([status])
+}
+
+model User {
+  id          String   @id
+  email       String?  @unique
+  name        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  memberships WorkspaceMember[]
+  auditLogs   AuditLog[]
+}
+
+model Workspace {
+  id          String   @id
+  name        String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  members     WorkspaceMember[]
+  artifacts   Artifact[]
+  portfolios  Portfolio[]
+  projects    Project[]
+  parserJobs  ParserJob[]
+  auditLogs   AuditLog[]
+  clusters    ProjectCluster[]
+}
+
+model WorkspaceMember {
+  id          String @id
+  workspaceId String
+  userId      String
+  role        String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+}
+
+model Portfolio {
+  id          String   @id
+  workspaceId String
+  ownerId     String?
+  slug        String
+  title       String
+  status      String
+  theme       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  pages       PortfolioPage[]
+  projects    Project[]
+  publishRecords PublishRecord[]
+
+  @@unique([workspaceId, slug])
+}
+
+model PortfolioPage {
+  id          String   @id
+  portfolioId String
+  type        String
+  slug        String
+  title       String
+  order       Int
+  status      String
+  contentJson Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  portfolio   Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+
+  @@unique([portfolioId, slug])
+}
+
+model Project {
+  id          String   @id
+  workspaceId String
+  portfolioId String?
+  title       String
+  summary     String?
+  status      String
+  confidenceScore Int?
+  sourceClusterId String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  portfolio   Portfolio? @relation(fields: [portfolioId], references: [id], onDelete: SetNull)
+  caseStudies CaseStudy[]
+  evidenceLinks EvidenceLink[]
+
+  @@index([workspaceId, status])
+}
+
+model CaseStudy {
+  id          String   @id
+  projectId   String
+  title       String
+  status      String
+  contentJson Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  project     Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  evidenceLinks EvidenceLink[]
+}
+
+model EvidenceLink {
+  id          String   @id
+  workspaceId String
+  artifactId  String
+  projectId   String?
+  caseStudyId String?
+  claimPath   String?
+  quote       String?
+  reason      String?
+  confidenceScore Int?
+  status      String
+  createdAt   DateTime @default(now())
+  artifact    Artifact @relation(fields: [artifactId], references: [id], onDelete: Cascade)
+  project     Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  caseStudy   CaseStudy? @relation(fields: [caseStudyId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([artifactId])
+  @@index([projectId])
+}
+
+model ParserJob {
+  id          String   @id
+  workspaceId String
+  artifactId  String
+  type        String
+  status      String
+  error       String?
+  attempts    Int      @default(0)
+  outputJson  Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  artifact    Artifact @relation(fields: [artifactId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, status])
+  @@index([artifactId])
+}
+
+model PublishRecord {
+  id          String   @id
+  portfolioId String
+  version     Int
+  status      String
+  url         String?
+  snapshotJson Json
+  publishedAt DateTime?
+  createdAt   DateTime @default(now())
+  portfolio   Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+
+  @@unique([portfolioId, version])
+}
+
+model AuditLog {
+  id          String   @id
+  workspaceId String
+  actorId     String?
+  action      String
+  entityType  String
+  entityId    String
+  beforeJson  Json?
+  afterJson   Json?
+  source      String
+  requestId   String?
+  createdAt   DateTime @default(now())
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  actor       User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, createdAt])
+  @@index([entityType, entityId])
 }

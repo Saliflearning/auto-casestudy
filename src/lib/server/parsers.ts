@@ -1,6 +1,10 @@
 import { randomUUID } from "node:crypto";
 import JSZip from "jszip";
 
+const MAX_EXTRACTED_TEXT_CHARS = Number(process.env.AUTOCASESTUDY_MAX_EXTRACTED_TEXT_CHARS ?? 50_000);
+const MAX_PPTX_SLIDES = Number(process.env.AUTOCASESTUDY_MAX_PPTX_SLIDES ?? 80);
+const MAX_PPTX_SLIDE_XML_CHARS = Number(process.env.AUTOCASESTUDY_MAX_PPTX_SLIDE_XML_CHARS ?? 250_000);
+
 export type ParseResult =
   | {
       status: "Parsed";
@@ -23,7 +27,7 @@ export type ParseResult =
     };
 
 function cleanText(text: string) {
-  return text.replace(/\s+/g, " ").trim();
+  return text.replace(/\s+/g, " ").trim().slice(0, MAX_EXTRACTED_TEXT_CHARS);
 }
 
 function ext(name: string) {
@@ -49,8 +53,9 @@ async function parsePptx(bytes: Buffer) {
     .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
 
   const chunks: string[] = [];
-  for (const fileName of slideFiles) {
+  for (const fileName of slideFiles.slice(0, MAX_PPTX_SLIDES)) {
     const xml = await zip.files[fileName].async("text");
+    if (xml.length > MAX_PPTX_SLIDE_XML_CHARS) continue;
     const matches: string[] = [];
     const textNodePattern = /<a:t>(.*?)<\/a:t>/g;
     let match = textNodePattern.exec(xml);
@@ -134,7 +139,7 @@ export async function parseArtifactBytes({
   } catch (error) {
     return {
       status: "Failed",
-      parserError: error instanceof Error ? error.message : "Unknown parser failure."
+      parserError: "Parser failed safely. Try a smaller file or export the source document again."
     };
   }
 }

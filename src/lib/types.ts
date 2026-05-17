@@ -1,5 +1,5 @@
 export type Persona =
-  | "HCI Master’s Student"
+  | "HCI Master's Student"
   | "UX Researcher"
   | "Product Designer"
   | "Technical UX Hybrid"
@@ -111,6 +111,7 @@ export type Artifact = {
   storagePath?: string;
   storageUrl?: string;
   storageKey?: string;
+  storageVisibility?: "private" | "public-demo" | "local-dev";
   status?: ArtifactProcessingStatus;
   extractedContent?: ArtifactExtractedContent;
   classification?: ArtifactClassification;

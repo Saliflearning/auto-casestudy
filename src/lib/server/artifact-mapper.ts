@@ -3,12 +3,14 @@ import { Artifact, ArtifactClassificationKind } from "@/lib/types";
 export type ArtifactMetadataRecord = {
   id: string;
   userId: string;
+  workspaceId?: string;
   fileName: string;
   fileType: string;
   mimeType: string;
   sizeBytes: number;
   storageUrl: string;
   storageKey: string;
+  storageVisibility?: string | null;
   status: string;
   parserError?: string | null;
   uploadedAt: string | Date;
@@ -58,6 +60,10 @@ export function recordToArtifact(record: ArtifactMetadataRecord): Artifact {
     storagePath: record.storageKey,
     storageKey: record.storageKey,
     storageUrl: record.storageUrl,
+    storageVisibility:
+      record.storageVisibility === "private" || record.storageVisibility === "public-demo" || record.storageVisibility === "local-dev"
+        ? record.storageVisibility
+        : "local-dev",
     status: record.status as Artifact["status"],
     parserError: record.parserError ?? undefined,
     extractedContent: record.extractedContent

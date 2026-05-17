@@ -1,6 +1,9 @@
+import { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { ProjectCluster } from "@/lib/types";
 import { saveClusterDecision } from "@/lib/server/evidence-map-repository";
+import { listArtifacts } from "@/lib/server/artifact-repository";
+import { getWorkspaceId, workspaceCookieHeader } from "@/lib/server/workspace";
 
 export const runtime = "nodejs";
 
@@ -17,8 +20,11 @@ function validateCluster(value: unknown): ProjectCluster | null {
   if (
     typeof cluster.id !== "string" ||
     typeof cluster.label !== "string" ||
+    cluster.label.length > 120 ||
     !isStringArray(cluster.artifactIds) ||
+    cluster.artifactIds.length > 50 ||
     !isStringArray(cluster.reasons) ||
+    cluster.reasons.length > 12 ||
     typeof cluster.confidenceScore !== "number" ||
     typeof cluster.status !== "string" ||
     !clusterStatuses.has(cluster.status) ||
@@ -31,14 +37,15 @@ function validateCluster(value: unknown): ProjectCluster | null {
     id: cluster.id,
     label: cluster.label.trim() || "Untitled project cluster",
     artifactIds: Array.from(new Set(cluster.artifactIds)),
-    reasons: cluster.reasons,
+    reasons: cluster.reasons.map((reason) => reason.slice(0, 240)),
     confidenceScore: Math.max(0, Math.min(100, Math.round(cluster.confidenceScore))),
     status: cluster.status,
     createdAt: cluster.createdAt
   };
 }
 
-export async function PATCH(request: Request) {
+export async function PATCH(request: NextRequest) {
+  const workspaceId = getWorkspaceId(request);
   const body = await request.json();
   const cluster = validateCluster(body.cluster);
 
@@ -46,6 +53,15 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "A valid project cluster is required." }, { status: 400 });
   }
 
-  const saved = await saveClusterDecision(cluster);
-  return NextResponse.json({ cluster: saved });
+  const artifacts = await listArtifacts(workspaceId);
+  const knownArtifactIds = new Set(artifacts.map((artifact) => artifact.id));
+  const hasUnknownArtifacts = cluster.artifactIds.some((artifactId) => !knownArtifactIds.has(artifactId));
+  if (hasUnknownArtifacts) {
+    return NextResponse.json({ error: "Cluster contains artifacts outside this workspace." }, { status: 403 });
+  }
+
+  const saved = await saveClusterDecision(cluster, workspaceId);
+  const response = NextResponse.json({ cluster: saved });
+  response.headers.append("Set-Cookie", workspaceCookieHeader(workspaceId));
+  return response;
 }

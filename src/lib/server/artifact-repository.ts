@@ -22,6 +22,17 @@ function prisma() {
   return globalForPrisma.prisma;
 }
 
+async function ensureWorkspace(workspaceId: string) {
+  await prisma().workspace.upsert({
+    where: { id: workspaceId },
+    update: {},
+    create: {
+      id: workspaceId,
+      name: "Auto-CaseStudy Workspace"
+    }
+  });
+}
+
 async function readLocalManifest(): Promise<Artifact[]> {
   try {
     const raw = await readFile(manifestPath, "utf8");
@@ -36,32 +47,40 @@ async function writeLocalManifest(artifacts: Artifact[]) {
   await writeFile(manifestPath, JSON.stringify(artifacts, null, 2), "utf8");
 }
 
-export async function listArtifacts(): Promise<Artifact[]> {
+export async function listArtifacts(workspaceId?: string): Promise<Artifact[]> {
   if (shouldUseDatabase()) {
     const records = await prisma().artifact.findMany({
+      where: workspaceId ? { workspaceId } : undefined,
       orderBy: { uploadedAt: "desc" },
       include: { extractedContent: true, classification: true }
     });
     return records.map(recordToArtifact);
   }
 
-  return readLocalManifest();
+  const records = await readLocalManifest();
+  return workspaceId ? records.filter((artifact) => artifact.userId === workspaceId) : records;
 }
 
 export async function createArtifactRecords(records: ArtifactMetadataRecord[]): Promise<Artifact[]> {
   if (shouldUseDatabase()) {
     const created = [];
+    const workspaceIds = Array.from(new Set(records.map((record) => record.workspaceId ?? record.userId)));
+    for (const workspaceId of workspaceIds) {
+      await ensureWorkspace(workspaceId);
+    }
     for (const record of records) {
       const artifact = await prisma().artifact.create({
         data: {
           id: record.id,
           userId: record.userId,
+          workspaceId: record.workspaceId ?? record.userId,
           fileName: record.fileName,
           fileType: record.fileType,
           mimeType: record.mimeType,
           sizeBytes: record.sizeBytes,
           storageUrl: record.storageUrl,
           storageKey: record.storageKey,
+          storageVisibility: record.storageVisibility ?? "local-dev",
           status: record.status,
           parserError: record.parserError,
           extractedContent: record.extractedContent

@@ -21,6 +21,17 @@ function prisma() {
   return globalForEvidencePrisma.evidencePrisma;
 }
 
+async function ensureWorkspace(workspaceId: string) {
+  await prisma().workspace.upsert({
+    where: { id: workspaceId },
+    update: {},
+    create: {
+      id: workspaceId,
+      name: "Auto-CaseStudy Workspace"
+    }
+  });
+}
+
 async function readLocalDecisions(): Promise<ProjectCluster[]> {
   try {
     const raw = await readFile(decisionsPath, "utf8");
@@ -35,9 +46,13 @@ async function writeLocalDecisions(clusters: ProjectCluster[]) {
   await writeFile(decisionsPath, JSON.stringify(clusters, null, 2), "utf8");
 }
 
-export async function listClusterDecisions(): Promise<ProjectCluster[]> {
+type StoredProjectCluster = ProjectCluster & { workspaceId?: string };
+
+export async function listClusterDecisions(workspaceId?: string): Promise<ProjectCluster[]> {
   if (shouldUseDatabase()) {
-    const clusters = await prisma().projectCluster.findMany();
+    const clusters = await prisma().projectCluster.findMany({
+      where: workspaceId ? { workspaceId } : undefined
+    });
     return clusters.map((cluster) => ({
       id: cluster.id,
       label: cluster.label,
@@ -49,14 +64,17 @@ export async function listClusterDecisions(): Promise<ProjectCluster[]> {
     }));
   }
 
-  return readLocalDecisions();
+  const decisions = (await readLocalDecisions()) as StoredProjectCluster[];
+  return workspaceId ? decisions.filter((cluster) => cluster.workspaceId === workspaceId) : decisions;
 }
 
-export async function saveClusterDecision(cluster: ProjectCluster) {
+export async function saveClusterDecision(cluster: ProjectCluster, workspaceId = "demo-workspace") {
   if (shouldUseDatabase()) {
+    await ensureWorkspace(workspaceId);
     const saved = await prisma().projectCluster.upsert({
       where: { id: cluster.id },
       update: {
+        workspaceId,
         label: cluster.label,
         artifactIds: cluster.artifactIds,
         reasons: cluster.reasons,
@@ -65,6 +83,7 @@ export async function saveClusterDecision(cluster: ProjectCluster) {
       },
       create: {
         id: cluster.id,
+        workspaceId,
         label: cluster.label,
         artifactIds: cluster.artifactIds,
         reasons: cluster.reasons,
@@ -85,8 +104,9 @@ export async function saveClusterDecision(cluster: ProjectCluster) {
     };
   }
 
-  const decisions = await readLocalDecisions();
-  const next = [cluster, ...decisions.filter((item) => item.id !== cluster.id)];
+  const decisions = (await readLocalDecisions()) as StoredProjectCluster[];
+  const scopedCluster = { ...cluster, workspaceId };
+  const next = [scopedCluster, ...decisions.filter((item) => item.id !== cluster.id)];
   await writeLocalDecisions(next);
   return cluster;
 }

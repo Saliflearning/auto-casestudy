@@ -66,13 +66,13 @@ export function inferPersona(artifacts: Artifact[]): Persona {
   if (/research|interview|survey|participant|usability/i.test(text)) return "UX Researcher";
   if (/figma|prototype|wireframe|visual|interaction/i.test(text)) return "Product Designer";
   if (/cloud|aws|azure|it|system/i.test(text)) return "Cloud/IT Hybrid";
-  return "HCI Master’s Student";
+  return "HCI Master's Student";
 }
 
 export function generateSections(artifacts: Artifact[], persona: Persona): CaseStudySection[] {
   const evidence = (phase: string) => artifacts.filter((artifact) => artifact.phase === phase).map((artifact) => artifact.id);
   const researchLanguage =
-    persona === "UX Researcher" || persona === "HCI Master’s Student"
+    persona === "UX Researcher" || persona === "HCI Master's Student"
       ? "The narrative foregrounds methodology, limitations, participant evidence, and traceable findings."
       : "The narrative translates research evidence into fast recruiter-readable product decisions.";
 

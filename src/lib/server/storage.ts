@@ -7,6 +7,7 @@ const uploadDir = path.join(process.cwd(), ".data", "uploads");
 export type StoredFile = {
   storageUrl: string;
   storageKey: string;
+  storageVisibility: "private" | "public-demo" | "local-dev";
 };
 
 function safeName(name: string) {
@@ -17,6 +18,12 @@ export async function storeArtifactFile(file: File, id: string, bytes: Buffer): 
   const storageKey = `artifacts/${id}/${safeName(file.name)}`;
 
   if (process.env.BLOB_READ_WRITE_TOKEN) {
+    if (process.env.AUTOCASESTUDY_ALLOW_PUBLIC_ARTIFACT_URLS !== "true") {
+      throw new Error(
+        "Production artifact storage is fail-closed: configure private object storage or explicitly allow public demo artifact URLs."
+      );
+    }
+
     const blob = await put(storageKey, bytes, {
       access: "public",
       contentType: file.type || "application/octet-stream",
@@ -25,7 +32,8 @@ export async function storeArtifactFile(file: File, id: string, bytes: Buffer): 
 
     return {
       storageUrl: blob.url,
-      storageKey: blob.pathname
+      storageKey: blob.pathname,
+      storageVisibility: "public-demo"
     };
   }
 
@@ -37,6 +45,7 @@ export async function storeArtifactFile(file: File, id: string, bytes: Buffer): 
 
   return {
     storageUrl: relativePath,
-    storageKey: relativePath
+    storageKey: relativePath,
+    storageVisibility: "local-dev"
   };
 }
