@@ -295,12 +295,13 @@ export function PortfolioStudio() {
     editor: (
       <ViewShell
         eyebrow="Editor"
-        title="Edit story"
-        detail="Rewrite, lock, and reorder sections."
+        title="Edit portfolio pages"
+        detail="Tune page briefs, then refine the case study canvas."
       >
         <EditorPanel
           sections={sections}
           artifacts={artifacts}
+          persona={persona}
           prompt={prompt}
           sensors={sensors}
           onPrompt={setPrompt}
@@ -470,16 +471,85 @@ function ViewShell({
   );
 }
 
-function PortfolioPageTree({ artifacts, sections }: { artifacts: Artifact[]; sections: CaseStudySection[] }) {
-  const pages = [
-    ["Home", "Positioning", "Ready"],
-    ["About", "Profile", "Draft"],
-    ["Projects", `${Math.max(1, sections.length - 2)} candidates`, "Draft"],
-    ["Case Studies", "Narratives", sections.some((section) => section.evidenceIds.length === 0) ? "Needs evidence" : "Ready"],
-    ["Resume", "Experience", artifacts.some((artifact) => artifact.classification?.classification === "resume/profile") ? "Ready" : "Needs source"],
-    ["Skills", "Tools", "Draft"],
-    ["Contact", "Handoff", "Draft"]
+type PortfolioPageKey = "home" | "about" | "projects" | "case-studies" | "resume" | "skills" | "contact";
+
+type PortfolioPageModel = {
+  id: PortfolioPageKey;
+  title: string;
+  purpose: string;
+  status: "Ready" | "Draft" | "Needs evidence" | "Needs source";
+  editorGoal: string;
+  evidenceIds: string[];
+};
+
+function getPortfolioPages(artifacts: Artifact[], sections: CaseStudySection[]): PortfolioPageModel[] {
+  const resumeArtifact = artifacts.find((artifact) => artifact.classification?.classification === "resume/profile");
+  const researchEvidence = artifacts.filter((artifact) => ["Research", "Synthesis", "Validation"].includes(artifact.phase)).slice(0, 3);
+  const technicalEvidence = artifacts.filter((artifact) => artifact.phase === "Technical Implementation").slice(0, 2);
+  const sectionEvidenceIds = Array.from(new Set(sections.flatMap((section) => section.evidenceIds)));
+
+  return [
+    {
+      id: "home",
+      title: "Home",
+      purpose: "Positioning",
+      status: "Ready",
+      editorGoal: "Shape the first impression, role promise, and featured proof.",
+      evidenceIds: artifacts.slice(0, 3).map((artifact) => artifact.id)
+    },
+    {
+      id: "about",
+      title: "About",
+      purpose: "Profile",
+      status: "Draft",
+      editorGoal: "Explain the professional identity behind the work.",
+      evidenceIds: resumeArtifact ? [resumeArtifact.id, ...technicalEvidence.map((artifact) => artifact.id)] : technicalEvidence.map((artifact) => artifact.id)
+    },
+    {
+      id: "projects",
+      title: "Projects",
+      purpose: `${Math.max(1, sections.length - 2)} candidates`,
+      status: "Draft",
+      editorGoal: "Choose which project cards and proof points appear first.",
+      evidenceIds: artifacts.slice(0, 6).map((artifact) => artifact.id)
+    },
+    {
+      id: "case-studies",
+      title: "Case Studies",
+      purpose: "Narratives",
+      status: sections.some((section) => section.evidenceIds.length === 0) ? "Needs evidence" : "Ready",
+      editorGoal: "Edit the long-form project stories and section evidence.",
+      evidenceIds: sectionEvidenceIds
+    },
+    {
+      id: "resume",
+      title: "Resume",
+      purpose: "Experience",
+      status: resumeArtifact ? "Ready" : "Needs source",
+      editorGoal: "Turn resume evidence into a concise experience block.",
+      evidenceIds: resumeArtifact ? [resumeArtifact.id] : []
+    },
+    {
+      id: "skills",
+      title: "Skills",
+      purpose: "Tools",
+      status: "Draft",
+      editorGoal: "Group tools, methods, and technical credibility by role.",
+      evidenceIds: [...researchEvidence, ...technicalEvidence].map((artifact) => artifact.id)
+    },
+    {
+      id: "contact",
+      title: "Contact",
+      purpose: "Handoff",
+      status: "Draft",
+      editorGoal: "Prepare the recruiter or reviewer handoff.",
+      evidenceIds: resumeArtifact ? [resumeArtifact.id] : []
+    }
   ];
+}
+
+function PortfolioPageTree({ artifacts, sections }: { artifacts: Artifact[]; sections: CaseStudySection[] }) {
+  const pages = getPortfolioPages(artifacts, sections);
 
   return (
     <section className="rounded-lg border border-line bg-surface p-5" aria-label="Portfolio site structure">
@@ -493,28 +563,58 @@ function PortfolioPageTree({ artifacts, sections }: { artifacts: Artifact[]; sec
         </span>
       </div>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {pages.map(([title, detail, status]) => (
+        {pages.map((page) => (
           <article
-            key={title}
+            key={page.id}
             className="rounded-md border border-line bg-panel p-4 transition duration-200 hover:-translate-y-1 hover:border-primary/30 hover:bg-panelHigh"
           >
             <div className="flex items-start justify-between gap-3">
-              <h3 className="font-semibold text-ink">{title}</h3>
-              <span
-                className={cn(
-                  "rounded-full px-2 py-1 text-[11px] font-semibold",
-                  status === "Ready" ? "bg-emerald/15 text-emerald" : status === "Needs evidence" || status === "Needs source" ? "bg-amber/15 text-amber" : "bg-primary/10 text-primary"
-                )}
-              >
-                {status}
-              </span>
+              <h3 className="font-semibold text-ink">{page.title}</h3>
+              <PageStatus status={page.status} />
             </div>
-            <p className="mt-3 text-sm leading-6 text-muted">{detail}</p>
+            <p className="mt-3 text-sm leading-6 text-muted">{page.purpose}</p>
           </article>
         ))}
       </div>
     </section>
   );
+}
+
+function PageStatus({ status }: { status: PortfolioPageModel["status"] }) {
+  return (
+    <span
+      className={cn(
+        "rounded-full px-2 py-1 text-[11px] font-semibold",
+        status === "Ready"
+          ? "bg-emerald/15 text-emerald"
+          : status === "Needs evidence" || status === "Needs source"
+            ? "bg-amber/15 text-amber"
+            : "bg-primary/10 text-primary"
+      )}
+    >
+      {status}
+    </span>
+  );
+}
+
+function makePageDraft(page: PortfolioPageModel, persona: Persona, artifacts: Artifact[], sections: CaseStudySection[]) {
+  const sourceCount = page.evidenceIds.length;
+  const projectCount = Math.max(1, sections.length - 2);
+  const role = persona.toLowerCase();
+  const copy: Record<PortfolioPageKey, string> = {
+    home: `A ${role} portfolio that turns research, design decisions, and technical proof into clear project stories. Feature the strongest project, role promise, and ${sourceCount} linked evidence sources.`,
+    about: `Introduce the person behind the work: how they think, what methods they use, and why their evidence supports the professional identity shown on the site.`,
+    projects: `Show ${projectCount} project candidates as scannable cards. Each card should include the problem, role, method, output, and the source artifacts behind the claim.`,
+    "case-studies": sections[0]?.content ?? "Build a long-form project narrative from confirmed evidence.",
+    resume: sourceCount
+      ? "Translate resume evidence into concise experience bullets, tools, certifications, and role credibility."
+      : "Resume source is missing. Ask the user to upload a resume, experience notes, certification, or LinkedIn export before publishing this page.",
+    skills: `Group tools and methods by credibility: research methods, design tools, technical systems, collaboration, and delivery. Avoid unsupported skill claims.`,
+    contact: "Create a simple handoff page with contact, resume download, portfolio links, and a short invitation for recruiters, professors, or collaborators."
+  };
+
+  if (!artifacts.length) return copy[page.id];
+  return copy[page.id];
 }
 
 function CognitionPanel() {
@@ -906,6 +1006,7 @@ function EvidenceMapPanel({
 function EditorPanel({
   sections,
   artifacts,
+  persona,
   prompt,
   sensors,
   onPrompt,
@@ -917,6 +1018,7 @@ function EditorPanel({
 }: {
   sections: CaseStudySection[];
   artifacts: Artifact[];
+  persona: Persona;
   prompt: string;
   sensors: ReturnType<typeof useSensors>;
   onPrompt: (value: string) => void;
@@ -926,8 +1028,19 @@ function EditorPanel({
   onUpdateSection: (id: string, content: string) => void;
   onRegenerate: () => void;
 }) {
+  const pages = useMemo(() => getPortfolioPages(artifacts, sections), [artifacts, sections]);
+  const [selectedPageId, setSelectedPageId] = useState<PortfolioPageKey>("case-studies");
   const [selectedSectionId, setSelectedSectionId] = useState(sections[0]?.id ?? "");
+  const [pageDrafts, setPageDrafts] = useState<Record<string, string>>({});
+  const selectedPage = pages.find((page) => page.id === selectedPageId) ?? pages[0];
   const selectedSection = sections.find((section) => section.id === selectedSectionId) ?? sections[0];
+  const pageDraft = selectedPage ? pageDrafts[selectedPage.id] ?? makePageDraft(selectedPage, persona, artifacts, sections) : "";
+
+  useEffect(() => {
+    if (!sections.some((section) => section.id === selectedSectionId)) {
+      setSelectedSectionId(sections[0]?.id ?? "");
+    }
+  }, [sections, selectedSectionId]);
 
   return (
     <section id="editor" className="space-y-4">
@@ -945,65 +1058,165 @@ function EditorPanel({
         </button>
       </form>
 
-      <div className="grid gap-4 xl:grid-cols-[220px_1fr_300px]">
-        <aside className="rounded-lg border border-line bg-surface p-4" aria-label="Case study outline">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <p className="text-xs uppercase tracking-[0.18em] text-primary">Outline</p>
-            <button onClick={onRegenerate} className="inline-flex min-h-9 items-center gap-2 rounded-md border border-line px-2 text-xs font-semibold text-muted transition hover:bg-panelHigh hover:text-ink">
-              <WandSparkles className="h-3.5 w-3.5" aria-hidden />
-              Draft
-            </button>
+      <div className="grid gap-4 xl:grid-cols-[240px_1fr_300px]">
+        <aside className="space-y-4 rounded-lg border border-line bg-surface p-4" aria-label="Portfolio editor navigation">
+          <div>
+            <p className="text-xs uppercase tracking-[0.18em] text-primary">Pages</p>
+            <div className="mt-3 space-y-2">
+              {pages.map((page) => (
+                <button
+                  key={page.id}
+                  type="button"
+                  onClick={() => setSelectedPageId(page.id)}
+                  className={cn(
+                    "flex min-h-11 w-full items-center justify-between gap-3 rounded-md border px-3 text-left text-sm transition",
+                    selectedPage?.id === page.id ? "border-primary/40 bg-primary/10 text-ink" : "border-line bg-panel text-muted hover:text-ink"
+                  )}
+                >
+                  <span className="truncate">{page.title}</span>
+                  <PageStatus status={page.status} />
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="space-y-2">
-            {sections.map((section, index) => (
-              <button
-                key={section.id}
-                type="button"
-                onClick={() => setSelectedSectionId(section.id)}
-                className={cn(
-                  "flex min-h-11 w-full items-center justify-between gap-3 rounded-md border px-3 text-left text-sm transition",
-                  selectedSection?.id === section.id ? "border-primary/40 bg-primary/10 text-ink" : "border-line bg-panel text-muted hover:text-ink"
-                )}
-              >
-                <span className="truncate">{index + 1}. {section.title}</span>
-                {section.locked ? <Lock className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden /> : null}
-              </button>
-            ))}
+
+          <div className="border-t border-line pt-4">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <p className="text-xs uppercase tracking-[0.18em] text-primary">Case sections</p>
+              <span className="rounded-full border border-line bg-panel px-2 py-1 text-[11px] text-muted">{sections.length}</span>
+            </div>
+            <div className="space-y-2">
+              {sections.map((section, index) => (
+                <button
+                  key={section.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedPageId("case-studies");
+                    setSelectedSectionId(section.id);
+                  }}
+                  className={cn(
+                    "flex min-h-11 w-full items-center justify-between gap-3 rounded-md border px-3 text-left text-sm transition",
+                    selectedPageId === "case-studies" && selectedSection?.id === section.id ? "border-primary/40 bg-primary/10 text-ink" : "border-line bg-panel text-muted hover:text-ink"
+                  )}
+                >
+                  <span className="truncate">{index + 1}. {section.title}</span>
+                  {section.locked ? <Lock className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden /> : null}
+                </button>
+              ))}
+            </div>
           </div>
         </aside>
 
-        <div className="rounded-lg border border-line bg-surface p-4">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4">
-            <div>
-              <p className="text-xs uppercase tracking-[0.18em] text-primary">Case study canvas</p>
-              <h3 className="mt-1 text-xl font-semibold">Portfolio story draft</h3>
-            </div>
-            <span className="rounded-full border border-line bg-panel px-3 py-1 text-xs text-muted">
-              {sections.length} sections
-            </span>
-          </div>
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-            <SortableContext items={sections.map((section) => section.id)} strategy={verticalListSortingStrategy}>
-              <div className="space-y-3">
-                {sections.map((section) => (
-                  <SortableSection
-                    key={section.id}
-                    section={section}
-                    artifacts={artifacts}
-                    active={selectedSection?.id === section.id}
-                    onSelect={() => setSelectedSectionId(section.id)}
-                    onToggleLock={onToggleLock}
-                    onUpdateSection={onUpdateSection}
-                  />
-                ))}
+        {selectedPageId === "case-studies" ? (
+          <div className="rounded-lg border border-line bg-surface p-4">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4">
+              <div>
+                <p className="text-xs uppercase tracking-[0.18em] text-primary">Case study canvas</p>
+                <h3 className="mt-1 text-xl font-semibold">Portfolio story draft</h3>
               </div>
-            </SortableContext>
-          </DndContext>
-        </div>
+            <button onClick={onRegenerate} className="inline-flex min-h-9 items-center gap-2 rounded-md border border-line px-2 text-xs font-semibold text-muted transition hover:bg-panelHigh hover:text-ink">
+              <WandSparkles className="h-3.5 w-3.5" aria-hidden />
+              Regenerate
+            </button>
+            </div>
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+              <SortableContext items={sections.map((section) => section.id)} strategy={verticalListSortingStrategy}>
+                <div className="space-y-3">
+                  {sections.map((section) => (
+                    <SortableSection
+                      key={section.id}
+                      section={section}
+                      artifacts={artifacts}
+                      active={selectedSection?.id === section.id}
+                      onSelect={() => setSelectedSectionId(section.id)}
+                      onToggleLock={onToggleLock}
+                      onUpdateSection={onUpdateSection}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
+          </div>
+        ) : (
+          <PageEditorCanvas
+            page={selectedPage}
+            persona={persona}
+            artifacts={artifacts}
+            draft={pageDraft}
+            onDraft={(value) => setPageDrafts((current) => ({ ...current, [selectedPage.id]: value }))}
+          />
+        )}
 
-        <EvidenceInspector section={selectedSection} artifacts={artifacts} />
+        <PortfolioEvidenceInspector
+          page={selectedPage}
+          section={selectedPageId === "case-studies" ? selectedSection : undefined}
+          artifacts={artifacts}
+        />
       </div>
     </section>
+  );
+}
+
+function PageEditorCanvas({
+  page,
+  persona,
+  artifacts,
+  draft,
+  onDraft
+}: {
+  page: PortfolioPageModel;
+  persona: Persona;
+  artifacts: Artifact[];
+  draft: string;
+  onDraft: (value: string) => void;
+}) {
+  const evidence = artifacts.filter((artifact) => page.evidenceIds.includes(artifact.id));
+
+  return (
+    <div className="rounded-lg border border-line bg-surface p-4">
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3 border-b border-line pb-4">
+        <div>
+          <p className="text-xs uppercase tracking-[0.18em] text-primary">Page canvas</p>
+          <h3 className="mt-1 text-xl font-semibold">{page.title} page</h3>
+          <p className="mt-1 max-w-2xl text-sm leading-6 text-muted">{page.editorGoal}</p>
+        </div>
+        <PageStatus status={page.status} />
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-3">
+        {[
+          ["Audience", persona],
+          ["Page role", page.purpose],
+          ["Sources", `${evidence.length} linked`]
+        ].map(([label, value]) => (
+          <div key={label} className="rounded-md border border-line bg-panel p-3">
+            <p className="text-xs uppercase tracking-[0.16em] text-muted">{label}</p>
+            <p className="mt-2 text-sm font-semibold text-ink">{value}</p>
+          </div>
+        ))}
+      </div>
+
+      <label className="mt-4 block text-xs uppercase tracking-[0.16em] text-primary" htmlFor={`${page.id}-draft`}>
+        Editable page draft
+      </label>
+      <textarea
+        id={`${page.id}-draft`}
+        value={draft}
+        onChange={(event) => onDraft(event.target.value)}
+        className="mt-2 min-h-[220px] w-full resize-y rounded-md border border-line bg-background/80 p-4 text-sm leading-7 text-ink"
+      />
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <button type="button" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-line px-3 text-sm font-semibold text-muted transition hover:bg-panelHigh hover:text-ink">
+          <Layers3 className="h-4 w-4" aria-hidden />
+          Add section block
+        </button>
+        <button type="button" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-line px-3 text-sm font-semibold text-muted transition hover:bg-panelHigh hover:text-ink">
+          <Link className="h-4 w-4" aria-hidden />
+          Attach evidence
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -1089,13 +1302,23 @@ function SortableSection({
   );
 }
 
-function EvidenceInspector({ section, artifacts }: { section?: CaseStudySection; artifacts: Artifact[] }) {
-  const evidence = section ? artifacts.filter((artifact) => section.evidenceIds.includes(artifact.id)) : [];
+function PortfolioEvidenceInspector({
+  page,
+  section,
+  artifacts
+}: {
+  page?: PortfolioPageModel;
+  section?: CaseStudySection;
+  artifacts: Artifact[];
+}) {
+  const evidenceIds = section?.evidenceIds ?? page?.evidenceIds ?? [];
+  const evidence = artifacts.filter((artifact) => evidenceIds.includes(artifact.id));
+  const title = section?.title ?? page?.title ?? "Select a page";
 
   return (
     <aside className="rounded-lg border border-line bg-surface p-4" aria-label="Evidence inspector">
       <p className="text-xs uppercase tracking-[0.18em] text-primary">Evidence</p>
-      <h3 className="mt-1 text-lg font-semibold">{section?.title ?? "Select a section"}</h3>
+      <h3 className="mt-1 text-lg font-semibold">{title}</h3>
       {evidence.length ? (
         <div className="mt-4 space-y-3">
           {evidence.map((artifact) => (
