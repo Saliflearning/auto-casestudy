@@ -1626,34 +1626,137 @@ function PortfolioPreview({
   artifacts: Artifact[];
 }) {
   const light = theme !== "Instrument Dark";
+  const pages = getPortfolioPages(artifacts, sections);
+  const featuredArtifacts = artifacts.slice(0, 3);
+  const projectPage = pages.find((page) => page.id === "projects") ?? pages[0];
+  const casePage = pages.find((page) => page.id === "case-study-detail") ?? pages[0];
+  const resumePage = pages.find((page) => page.id === "resume") ?? pages[0];
+  const skillsPage = pages.find((page) => page.id === "skills") ?? pages[0];
+  const contactPage = pages.find((page) => page.id === "contact") ?? pages[0];
+  const previewTone =
+    mode === "Research"
+      ? "A methods-forward portfolio with evidence, limitations, and source traceability."
+      : mode === "Technical"
+        ? "A hybrid portfolio translating implementation depth into product credibility."
+        : "A recruiter-readable portfolio focused on role clarity, decisions, visuals, and impact.";
+
   return (
     <section id="preview" className={cn("rounded-lg border p-5", light ? "border-slate-200 bg-paper text-slateInk" : "border-line bg-surface text-ink")}>
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h2 className="mt-2 text-xl font-semibold">{persona}</h2>
+      <div className={cn("rounded-md border p-4", light ? "border-slate-200 bg-white" : "border-line bg-panel")}>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-current/10 pb-4">
+          <div>
+            <p className={cn("text-xs uppercase tracking-[0.18em]", light ? "text-slate-500" : "text-primary")}>Published portfolio site</p>
+            <h2 className="mt-1 text-2xl font-semibold">{persona}</h2>
+          </div>
+          <nav className="flex flex-wrap gap-2 text-xs" aria-label="Preview site navigation">
+            {pages.filter((page) => !page.parent).map((page) => (
+              <span key={page.id} className={cn("rounded-full border px-2.5 py-1", light ? "border-slate-200 bg-slate-50 text-slate-600" : "border-line bg-surface text-muted")}>
+                {page.title}
+              </span>
+            ))}
+          </nav>
         </div>
-        <span className={cn("rounded-full px-2.5 py-1 text-xs font-semibold", light ? "bg-slate-900 text-white" : "bg-primary text-slateInk")}>{mode}</span>
+
+        <div className="grid gap-5 py-6 lg:grid-cols-[1.1fr_0.9fr]">
+          <div>
+            <span className={cn("rounded-full px-2.5 py-1 text-xs font-semibold", light ? "bg-slate-900 text-white" : "bg-primary text-slateInk")}>{mode}</span>
+            <h3 className="mt-4 max-w-2xl text-3xl font-semibold tracking-tight">
+              Evidence-backed portfolio for a {persona.toLowerCase()}.
+            </h3>
+            <p className={cn("mt-3 max-w-2xl text-sm leading-6", light ? "text-slate-600" : "text-muted")}>{previewTone}</p>
+            <div className="mt-5 flex flex-wrap gap-2">
+              <span className={cn("rounded-md border px-3 py-2 text-xs font-semibold", light ? "border-slate-200 bg-slate-50" : "border-line bg-background")}>
+                {artifacts.length} artifacts linked
+              </span>
+              <span className={cn("rounded-md border px-3 py-2 text-xs font-semibold", light ? "border-slate-200 bg-slate-50" : "border-line bg-background")}>
+                {sections.length} case sections
+              </span>
+              <span className={cn("rounded-md border px-3 py-2 text-xs font-semibold", light ? "border-slate-200 bg-slate-50" : "border-line bg-background")}>
+                {pages.length} site pages
+              </span>
+            </div>
+          </div>
+
+          <div className={cn("rounded-md border p-4", light ? "border-slate-200 bg-slate-50" : "border-line bg-background")}>
+            <p className={cn("text-xs uppercase tracking-[0.16em]", light ? "text-slate-500" : "text-primary")}>Hero media slot</p>
+            <div className={cn("mt-3 aspect-[16/10] rounded-md border border-dashed p-4", light ? "border-slate-300 bg-white" : "border-primary/30 bg-surface")}>
+              <div className="flex h-full flex-col justify-between">
+                <ImageIcon className={cn("h-8 w-8", light ? "text-slate-400" : "text-primary")} aria-hidden />
+                <div>
+                  <p className="text-sm font-semibold">Agent-selected hero visual</p>
+                  <p className={cn("mt-1 text-xs leading-5", light ? "text-slate-500" : "text-muted")}>
+                    Uploaded screenshot, portrait, prototype still, generated visual, or short motion preview.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-      <p className={cn("mt-4 text-sm leading-6", light ? "text-slate-600" : "text-muted")}>
-        {mode === "Research"
-          ? "A methods-forward portfolio with evidence, limitations, and source traceability."
-          : mode === "Technical"
-            ? "A hybrid portfolio translating implementation depth into product credibility."
-            : "A recruiter-readable portfolio focused on role clarity, decisions, visuals, and impact."}
-      </p>
-      <div className="mt-5 space-y-4">
-        {sections.slice(0, 4).map((section) => (
-          <article key={section.id} className={cn("rounded-md border p-4", light ? "border-slate-200 bg-white" : "border-line bg-panel")}>
-            <h3 className="font-semibold">{section.title}</h3>
-            <p className={cn("mt-2 text-sm leading-6", light ? "text-slate-600" : "text-muted")}>{section.content}</p>
-            <p className={cn("mt-3 text-xs", section.evidenceIds.length ? "text-emerald" : "text-danger")}>
-              {section.evidenceIds.length ? `${section.evidenceIds.length} evidence source${section.evidenceIds.length === 1 ? "" : "s"}` : "No evidence found"}
-            </p>
+
+      <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_0.85fr]">
+        <section className={cn("rounded-md border p-4", light ? "border-slate-200 bg-white" : "border-line bg-panel")}>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className={cn("text-xs uppercase tracking-[0.16em]", light ? "text-slate-500" : "text-primary")}>Projects page</p>
+              <h3 className="mt-1 text-xl font-semibold">Project index and case-study routes</h3>
+            </div>
+            <PageStatus status={projectPage.status} />
+          </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
+            {featuredArtifacts.map((artifact, index) => (
+              <article key={artifact.id} className={cn("rounded-md border p-3", light ? "border-slate-200 bg-slate-50" : "border-line bg-background")}>
+                <div className={cn("mb-3 flex aspect-video items-center justify-center rounded border border-dashed", light ? "border-slate-300 bg-white" : "border-primary/25 bg-surface")}>
+                  <ImageIcon className={cn("h-5 w-5", light ? "text-slate-400" : "text-primary")} aria-hidden />
+                </div>
+                <p className="truncate text-sm font-semibold">Project {index + 1}</p>
+                <p className={cn("mt-1 text-xs", light ? "text-slate-500" : "text-muted")}>{artifact.phase}</p>
+                <p className="mt-3 text-xs font-semibold text-primary">Open case study</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className={cn("rounded-md border p-4", light ? "border-slate-200 bg-white" : "border-line bg-panel")}>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className={cn("text-xs uppercase tracking-[0.16em]", light ? "text-slate-500" : "text-primary")}>Nested under Projects</p>
+              <h3 className="mt-1 text-xl font-semibold">{casePage.title}</h3>
+            </div>
+            <PageStatus status={casePage.status} />
+          </div>
+          <div className="mt-4 space-y-3">
+            {sections.slice(0, 3).map((section) => (
+              <article key={section.id} className={cn("rounded-md border p-3", light ? "border-slate-200 bg-slate-50" : "border-line bg-background")}>
+                <h4 className="text-sm font-semibold">{section.title}</h4>
+                <p className={cn("mt-1 line-clamp-2 text-xs leading-5", light ? "text-slate-600" : "text-muted")}>{section.content}</p>
+                <p className={cn("mt-2 text-xs", section.evidenceIds.length ? "text-emerald" : "text-danger")}>
+                  {section.evidenceIds.length ? `${section.evidenceIds.length} evidence source${section.evidenceIds.length === 1 ? "" : "s"}` : "No evidence found"}
+                </p>
+              </article>
+            ))}
+          </div>
+        </section>
+      </div>
+
+      <div className="mt-5 grid gap-4 md:grid-cols-3">
+        {[
+          [resumePage, "Experience, education, certifications, and resume download."],
+          [skillsPage, "Evidence-backed methods, tools, and technical credibility."],
+          [contactPage, "Contact actions, professional handoff, and share preview."]
+        ].map(([page, detail]) => (
+          <article key={(page as PortfolioPageModel).id} className={cn("rounded-md border p-4", light ? "border-slate-200 bg-white" : "border-line bg-panel")}>
+            <div className="flex items-start justify-between gap-3">
+              <h3 className="font-semibold">{(page as PortfolioPageModel).title}</h3>
+              <PageStatus status={(page as PortfolioPageModel).status} />
+            </div>
+            <p className={cn("mt-3 text-sm leading-6", light ? "text-slate-600" : "text-muted")}>{detail as string}</p>
           </article>
         ))}
       </div>
+
       <div className={cn("mt-5 rounded-md border p-3 text-xs", light ? "border-slate-200 bg-slate-50 text-slate-600" : "border-line bg-background text-muted")}>
-        <p>{artifacts.length} source artifacts linked.</p>
+        <p>{artifacts.length} source artifacts linked across the portfolio site. Preview reflects the page model from Strategy and Editor.</p>
       </div>
     </section>
   );
