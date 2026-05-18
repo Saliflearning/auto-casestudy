@@ -14,8 +14,11 @@ The project now uses formal product and engineering documents as the source of t
 - `docs/APP_FLOW.md`
 - `docs/BACKEND_SCHEMA.md`
 - `docs/IMPLEMENTATION_PLAN.md`
+- `docs/STARTUP_QUALITY_SYSTEM.md`
 
 Read these before making product, UX, architecture, schema, or release changes.
+
+The startup quality system protects the core promise, security posture, team roles, feasibility gates, and QA expectations for every major step.
 
 ## MVP Wedge
 
@@ -51,7 +54,10 @@ Every major Auto-CaseStudy step should include:
 2. Tech stack used.
 3. What each part does.
 4. How to reproduce it.
-5. What comes next.
+5. Security and privacy notes.
+6. QA checklist.
+7. Feasibility notes.
+8. What comes next.
 
 Use `docs/STEP_TEMPLATE.md` for new implementation milestones.
 
