@@ -30,7 +30,7 @@ import {
   Download,
   FileText,
   GripVertical,
-  Image,
+  Image as ImageIcon,
   Layers3,
   Link,
   Lock,
@@ -471,7 +471,7 @@ function ViewShell({
   );
 }
 
-type PortfolioPageKey = "home" | "about" | "projects" | "case-studies" | "resume" | "skills" | "contact";
+type PortfolioPageKey = "home" | "about" | "projects" | "case-study-detail" | "resume" | "skills" | "contact";
 
 type PortfolioPageModel = {
   id: PortfolioPageKey;
@@ -480,6 +480,17 @@ type PortfolioPageModel = {
   status: "Ready" | "Draft" | "Needs evidence" | "Needs source";
   editorGoal: string;
   evidenceIds: string[];
+  parent?: PortfolioPageKey;
+  mustHave: string[];
+  mediaPlan: string[];
+};
+
+type PortfolioPageElement = {
+  id: string;
+  label: string;
+  detail: string;
+  kind: "content" | "media" | "proof" | "interaction";
+  required: boolean;
 };
 
 function getPortfolioPages(artifacts: Artifact[], sections: CaseStudySection[]): PortfolioPageModel[] {
@@ -495,7 +506,9 @@ function getPortfolioPages(artifacts: Artifact[], sections: CaseStudySection[]):
       purpose: "Positioning",
       status: "Ready",
       editorGoal: "Shape the first impression, role promise, and featured proof.",
-      evidenceIds: artifacts.slice(0, 3).map((artifact) => artifact.id)
+      evidenceIds: artifacts.slice(0, 3).map((artifact) => artifact.id),
+      mustHave: ["Name and role headline", "Short value proposition", "Featured project", "Primary CTA", "Proof snapshot"],
+      mediaPlan: ["Portrait or personal brand visual", "Featured project screenshot", "Optional motion preview"]
     },
     {
       id: "about",
@@ -503,23 +516,30 @@ function getPortfolioPages(artifacts: Artifact[], sections: CaseStudySection[]):
       purpose: "Profile",
       status: "Draft",
       editorGoal: "Explain the professional identity behind the work.",
-      evidenceIds: resumeArtifact ? [resumeArtifact.id, ...technicalEvidence.map((artifact) => artifact.id)] : technicalEvidence.map((artifact) => artifact.id)
+      evidenceIds: resumeArtifact ? [resumeArtifact.id, ...technicalEvidence.map((artifact) => artifact.id)] : technicalEvidence.map((artifact) => artifact.id),
+      mustHave: ["Professional bio", "Design/research philosophy", "Working style", "Credibility proof", "Current goal"],
+      mediaPlan: ["Profile photo", "Workspace/process photo", "Optional intro video"]
     },
     {
       id: "projects",
       title: "Projects",
-      purpose: `${Math.max(1, sections.length - 2)} candidates`,
+      purpose: `${Math.max(1, sections.length - 2)} projects + case studies`,
       status: "Draft",
-      editorGoal: "Choose which project cards and proof points appear first.",
-      evidenceIds: artifacts.slice(0, 6).map((artifact) => artifact.id)
+      editorGoal: "Build the project index, featured cards, filters, and routes into case-study detail pages.",
+      evidenceIds: artifacts.slice(0, 6).map((artifact) => artifact.id),
+      mustHave: ["Project cards", "Role and timeline", "Methods/tools", "Outcome or learning", "Open case study action"],
+      mediaPlan: ["Project thumbnail", "Prototype screenshot", "Optional hover animation/video"]
     },
     {
-      id: "case-studies",
-      title: "Case Studies",
-      purpose: "Narratives",
+      id: "case-study-detail",
+      title: "Case Study Detail",
+      purpose: "Inside Projects",
       status: sections.some((section) => section.evidenceIds.length === 0) ? "Needs evidence" : "Ready",
-      editorGoal: "Edit the long-form project stories and section evidence.",
-      evidenceIds: sectionEvidenceIds
+      editorGoal: "Edit the long-form project story that opens from a project card.",
+      evidenceIds: sectionEvidenceIds,
+      parent: "projects",
+      mustHave: ["Hero summary", "Problem and context", "Role", "Process timeline", "Research evidence", "Design/media", "Outcome", "Reflection"],
+      mediaPlan: ["Hero image", "Research photos", "Wireframes", "Prototype embed", "Before/after visuals", "Testing clips if available"]
     },
     {
       id: "resume",
@@ -527,7 +547,9 @@ function getPortfolioPages(artifacts: Artifact[], sections: CaseStudySection[]):
       purpose: "Experience",
       status: resumeArtifact ? "Ready" : "Needs source",
       editorGoal: "Turn resume evidence into a concise experience block.",
-      evidenceIds: resumeArtifact ? [resumeArtifact.id] : []
+      evidenceIds: resumeArtifact ? [resumeArtifact.id] : [],
+      mustHave: ["Experience timeline", "Role bullets", "Education", "Certifications", "Download resume CTA"],
+      mediaPlan: ["Resume PDF preview", "Certification badges", "Company/course logos if allowed"]
     },
     {
       id: "skills",
@@ -535,7 +557,9 @@ function getPortfolioPages(artifacts: Artifact[], sections: CaseStudySection[]):
       purpose: "Tools",
       status: "Draft",
       editorGoal: "Group tools, methods, and technical credibility by role.",
-      evidenceIds: [...researchEvidence, ...technicalEvidence].map((artifact) => artifact.id)
+      evidenceIds: [...researchEvidence, ...technicalEvidence].map((artifact) => artifact.id),
+      mustHave: ["Research methods", "Design tools", "Technical tools", "Soft skills", "Evidence-backed skill groups"],
+      mediaPlan: ["Tool badges", "Method cards", "Small evidence links"]
     },
     {
       id: "contact",
@@ -543,7 +567,9 @@ function getPortfolioPages(artifacts: Artifact[], sections: CaseStudySection[]):
       purpose: "Handoff",
       status: "Draft",
       editorGoal: "Prepare the recruiter or reviewer handoff.",
-      evidenceIds: resumeArtifact ? [resumeArtifact.id] : []
+      evidenceIds: resumeArtifact ? [resumeArtifact.id] : [],
+      mustHave: ["Email/contact action", "LinkedIn/GitHub links", "Resume download", "Availability note", "Professional closing"],
+      mediaPlan: ["Simple profile visual", "Social preview card"]
     }
   ];
 }
@@ -604,8 +630,8 @@ function makePageDraft(page: PortfolioPageModel, persona: Persona, artifacts: Ar
   const copy: Record<PortfolioPageKey, string> = {
     home: `A ${role} portfolio that turns research, design decisions, and technical proof into clear project stories. Feature the strongest project, role promise, and ${sourceCount} linked evidence sources.`,
     about: `Introduce the person behind the work: how they think, what methods they use, and why their evidence supports the professional identity shown on the site.`,
-    projects: `Show ${projectCount} project candidates as scannable cards. Each card should include the problem, role, method, output, and the source artifacts behind the claim.`,
-    "case-studies": sections[0]?.content ?? "Build a long-form project narrative from confirmed evidence.",
+    projects: `Show ${projectCount} project candidates as scannable cards. Each card should include the problem, role, method, output, thumbnail, and a link into a case-study detail page.`,
+    "case-study-detail": sections[0]?.content ?? "Build a long-form project narrative from confirmed evidence.",
     resume: sourceCount
       ? "Translate resume evidence into concise experience bullets, tools, certifications, and role credibility."
       : "Resume source is missing. Ask the user to upload a resume, experience notes, certification, or LinkedIn export before publishing this page.",
@@ -615,6 +641,70 @@ function makePageDraft(page: PortfolioPageModel, persona: Persona, artifacts: Ar
 
   if (!artifacts.length) return copy[page.id];
   return copy[page.id];
+}
+
+function getPageElements(page: PortfolioPageModel): PortfolioPageElement[] {
+  const shared: PortfolioPageElement[] = [
+    {
+      id: "seo",
+      label: "SEO and social preview",
+      detail: "Title, description, share image, and page slug generated from the portfolio strategy.",
+      kind: "proof",
+      required: true
+    },
+    {
+      id: "accessibility",
+      label: "Accessibility pass",
+      detail: "Alt text, heading order, keyboard-safe interactions, and contrast checks.",
+      kind: "proof",
+      required: true
+    }
+  ];
+
+  const byPage: Record<PortfolioPageKey, PortfolioPageElement[]> = {
+    home: [
+      { id: "hero", label: "Hero identity", detail: "Name, role, value promise, location/status, and primary action.", kind: "content", required: true },
+      { id: "hero-media", label: "Hero visual", detail: "Portrait, featured project screenshot, short loop, or generated brand visual.", kind: "media", required: true },
+      { id: "featured-work", label: "Featured work", detail: "Two to three strongest projects with evidence-backed hooks.", kind: "interaction", required: true },
+      { id: "credibility", label: "Proof strip", detail: "Methods, tools, certifications, research scope, or technical stack.", kind: "proof", required: false }
+    ],
+    about: [
+      { id: "bio", label: "Professional bio", detail: "Short story of the person, background, direction, and point of view.", kind: "content", required: true },
+      { id: "portrait", label: "Portrait/process media", detail: "Profile photo, workspace image, sketch/process photo, or intro clip.", kind: "media", required: true },
+      { id: "philosophy", label: "Working philosophy", detail: "How the person thinks as a researcher, designer, builder, or hybrid.", kind: "content", required: true },
+      { id: "credibility-links", label: "Credibility links", detail: "Resume, certifications, GitHub, publications, or artifacts that support claims.", kind: "proof", required: true }
+    ],
+    projects: [
+      { id: "project-grid", label: "Project grid", detail: "Cards with title, role, timeline, methods, thumbnail, and open case study action.", kind: "interaction", required: true },
+      { id: "filters", label: "Filters", detail: "Filter by research, design, technical, academic, or professional work.", kind: "interaction", required: false },
+      { id: "project-media", label: "Project thumbnails", detail: "Screenshots, prototype stills, diagrams, or generated visuals when artifacts lack media.", kind: "media", required: true },
+      { id: "case-routing", label: "Case study routing", detail: "Each serious project opens a detail page with full process evidence.", kind: "proof", required: true }
+    ],
+    "case-study-detail": [
+      { id: "case-hero", label: "Case study hero", detail: "Project title, problem, role, timeline, team, tools, and hero image/video.", kind: "content", required: true },
+      { id: "process-timeline", label: "Process timeline", detail: "Research, synthesis, ideation, design, testing, iteration, outcome.", kind: "interaction", required: true },
+      { id: "evidence-media", label: "Evidence media", detail: "Photos, wireframes, Figma embeds, screenshots, diagrams, clips, and captions.", kind: "media", required: true },
+      { id: "claim-trace", label: "Claim traceability", detail: "Every major claim links back to source artifacts or is marked as unsupported.", kind: "proof", required: true },
+      { id: "reflection", label: "Reflection", detail: "What changed, what was learned, limitations, and next iteration.", kind: "content", required: true }
+    ],
+    resume: [
+      { id: "experience", label: "Experience timeline", detail: "Roles, organizations, dates, bullets, and evidence-backed outcomes.", kind: "content", required: true },
+      { id: "education", label: "Education and certifications", detail: "Degrees, courses, certificates, and connected proof artifacts.", kind: "proof", required: true },
+      { id: "resume-media", label: "Resume packet", detail: "PDF preview, downloadable resume, and recruiter-friendly summary.", kind: "media", required: false }
+    ],
+    skills: [
+      { id: "skill-groups", label: "Skill groups", detail: "Methods, tools, systems, collaboration, and domain strengths.", kind: "content", required: true },
+      { id: "proofed-skills", label: "Evidence-backed skills", detail: "Skills connected to projects, artifacts, certifications, or work history.", kind: "proof", required: true },
+      { id: "tool-visuals", label: "Tool visuals", detail: "Tool badges, method cards, and technical stack chips.", kind: "media", required: false }
+    ],
+    contact: [
+      { id: "contact-actions", label: "Contact actions", detail: "Email, LinkedIn, GitHub, resume download, and optional booking link later.", kind: "interaction", required: true },
+      { id: "handoff-copy", label: "Handoff copy", detail: "Short closing message tailored to recruiter, academic, or technical audiences.", kind: "content", required: true },
+      { id: "share-card", label: "Share card", detail: "Clean social preview for the published portfolio link.", kind: "media", required: false }
+    ]
+  };
+
+  return [...byPage[page.id], ...shared];
 }
 
 function CognitionPanel() {
@@ -1029,7 +1119,7 @@ function EditorPanel({
   onRegenerate: () => void;
 }) {
   const pages = useMemo(() => getPortfolioPages(artifacts, sections), [artifacts, sections]);
-  const [selectedPageId, setSelectedPageId] = useState<PortfolioPageKey>("case-studies");
+  const [selectedPageId, setSelectedPageId] = useState<PortfolioPageKey>("case-study-detail");
   const [selectedSectionId, setSelectedSectionId] = useState(sections[0]?.id ?? "");
   const [pageDrafts, setPageDrafts] = useState<Record<string, string>>({});
   const selectedPage = pages.find((page) => page.id === selectedPageId) ?? pages[0];
@@ -1082,7 +1172,7 @@ function EditorPanel({
 
           <div className="border-t border-line pt-4">
             <div className="mb-3 flex items-center justify-between gap-3">
-              <p className="text-xs uppercase tracking-[0.18em] text-primary">Case sections</p>
+              <p className="text-xs uppercase tracking-[0.18em] text-primary">Project case sections</p>
               <span className="rounded-full border border-line bg-panel px-2 py-1 text-[11px] text-muted">{sections.length}</span>
             </div>
             <div className="space-y-2">
@@ -1091,12 +1181,12 @@ function EditorPanel({
                   key={section.id}
                   type="button"
                   onClick={() => {
-                    setSelectedPageId("case-studies");
+                    setSelectedPageId("case-study-detail");
                     setSelectedSectionId(section.id);
                   }}
                   className={cn(
                     "flex min-h-11 w-full items-center justify-between gap-3 rounded-md border px-3 text-left text-sm transition",
-                    selectedPageId === "case-studies" && selectedSection?.id === section.id ? "border-primary/40 bg-primary/10 text-ink" : "border-line bg-panel text-muted hover:text-ink"
+                    selectedPageId === "case-study-detail" && selectedSection?.id === section.id ? "border-primary/40 bg-primary/10 text-ink" : "border-line bg-panel text-muted hover:text-ink"
                   )}
                 >
                   <span className="truncate">{index + 1}. {section.title}</span>
@@ -1107,7 +1197,7 @@ function EditorPanel({
           </div>
         </aside>
 
-        {selectedPageId === "case-studies" ? (
+        {selectedPageId === "case-study-detail" ? (
           <div className="rounded-lg border border-line bg-surface p-4">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4">
               <div>
@@ -1149,7 +1239,7 @@ function EditorPanel({
 
         <PortfolioEvidenceInspector
           page={selectedPage}
-          section={selectedPageId === "case-studies" ? selectedSection : undefined}
+          section={selectedPageId === "case-study-detail" ? selectedSection : undefined}
           artifacts={artifacts}
         />
       </div>
@@ -1171,6 +1261,9 @@ function PageEditorCanvas({
   onDraft: (value: string) => void;
 }) {
   const evidence = artifacts.filter((artifact) => page.evidenceIds.includes(artifact.id));
+  const templateElements = getPageElements(page);
+  const requiredCount = templateElements.filter((element) => element.required).length;
+  const mediaElements = templateElements.filter((element) => element.kind === "media");
 
   return (
     <div className="rounded-lg border border-line bg-surface p-4">
@@ -1179,6 +1272,11 @@ function PageEditorCanvas({
           <p className="text-xs uppercase tracking-[0.18em] text-primary">Page canvas</p>
           <h3 className="mt-1 text-xl font-semibold">{page.title} page</h3>
           <p className="mt-1 max-w-2xl text-sm leading-6 text-muted">{page.editorGoal}</p>
+          {page.parent ? (
+            <p className="mt-2 inline-flex rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
+              Nested under {page.parent === "projects" ? "Projects" : page.parent}
+            </p>
+          ) : null}
         </div>
         <PageStatus status={page.status} />
       </div>
@@ -1187,13 +1285,80 @@ function PageEditorCanvas({
         {[
           ["Audience", persona],
           ["Page role", page.purpose],
-          ["Sources", `${evidence.length} linked`]
+          ["Sources", `${evidence.length} linked`],
+          ["Required blocks", `${requiredCount} required`]
         ].map(([label, value]) => (
           <div key={label} className="rounded-md border border-line bg-panel p-3">
             <p className="text-xs uppercase tracking-[0.16em] text-muted">{label}</p>
             <p className="mt-2 text-sm font-semibold text-ink">{value}</p>
           </div>
         ))}
+      </div>
+
+      <div className="mt-4 rounded-md border border-line bg-panel p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-xs uppercase tracking-[0.16em] text-primary">Template structure</p>
+            <h4 className="mt-1 font-semibold text-ink">What this page must contain</h4>
+          </div>
+          <span className="rounded-full border border-line bg-background px-2.5 py-1 text-xs text-muted">
+            Agent-fill targets
+          </span>
+        </div>
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          {templateElements.map((element) => (
+            <article key={element.id} className="rounded-md border border-line bg-background/70 p-3">
+              <div className="flex items-start gap-3">
+                <span className="inline-flex min-h-10 w-10 shrink-0 items-center justify-center rounded-md border border-line bg-surface text-primary">
+                  <PageElementIcon kind={element.kind} />
+                </span>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h5 className="text-sm font-semibold text-ink">{element.label}</h5>
+                    <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-semibold", element.required ? "bg-emerald/15 text-emerald" : "bg-primary/10 text-primary")}>
+                      {element.required ? "Required" : "Optional"}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs leading-5 text-muted">{element.detail}</p>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_0.85fr]">
+        <div className="rounded-md border border-line bg-panel p-4">
+          <p className="text-xs uppercase tracking-[0.16em] text-primary">Media slots</p>
+          <h4 className="mt-1 font-semibold text-ink">Photos, video, embeds, and motion</h4>
+          <div className="mt-4 space-y-2">
+            {page.mediaPlan.map((slot) => (
+              <div key={slot} className="flex items-start gap-3 rounded-md border border-line bg-background/70 p-3">
+                <ImageIcon className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
+                <div>
+                  <p className="text-sm font-semibold text-ink">{slot}</p>
+                  <p className="mt-1 text-xs leading-5 text-muted">Agent can attach uploaded media, suggest generated visuals, or request missing assets.</p>
+                </div>
+              </div>
+            ))}
+            {!mediaElements.length ? (
+              <p className="rounded-md border border-line bg-background/70 p-3 text-sm text-muted">No dedicated media slot for this page yet.</p>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="rounded-md border border-line bg-panel p-4">
+          <p className="text-xs uppercase tracking-[0.16em] text-primary">Agent recommendations</p>
+          <h4 className="mt-1 font-semibold text-ink">What the agent should do</h4>
+          <div className="mt-4 space-y-2">
+            {page.mustHave.slice(0, 5).map((item) => (
+              <div key={item} className="flex items-start gap-2 rounded-md border border-line bg-background/70 p-3 text-sm text-muted">
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald" aria-hidden />
+                <span>{item}</span>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
       <label className="mt-4 block text-xs uppercase tracking-[0.16em] text-primary" htmlFor={`${page.id}-draft`}>
@@ -1218,6 +1383,13 @@ function PageEditorCanvas({
       </div>
     </div>
   );
+}
+
+function PageElementIcon({ kind }: { kind: PortfolioPageElement["kind"] }) {
+  if (kind === "media") return <ImageIcon className="h-4 w-4" aria-hidden />;
+  if (kind === "proof") return <BadgeCheck className="h-4 w-4" aria-hidden />;
+  if (kind === "interaction") return <MonitorUp className="h-4 w-4" aria-hidden />;
+  return <FileText className="h-4 w-4" aria-hidden />;
 }
 
 function SortableSection({
