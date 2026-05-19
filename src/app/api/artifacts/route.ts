@@ -7,7 +7,7 @@ import { classifyArtifactRecord } from "@/lib/server/classifier";
 import { applyClusterDecisions, listClusterDecisions } from "@/lib/server/evidence-map-repository";
 import { createArtifactRecords, listArtifacts } from "@/lib/server/artifact-repository";
 import { parseArtifactBytes } from "@/lib/server/parsers";
-import { storeArtifactFile } from "@/lib/server/storage";
+import { StorageConfigurationError, storeArtifactFile } from "@/lib/server/storage";
 import { getWorkspaceId, workspaceCookieHeader } from "@/lib/server/workspace";
 
 export const runtime = "nodejs";
@@ -134,50 +134,58 @@ export async function POST(request: NextRequest) {
   const userId = workspaceId;
   const records = [];
 
-  for (const file of files) {
-    const id = `artifact_${randomUUID()}`;
-    const bytes = Buffer.from(await file.arrayBuffer());
-    const stored = await storeArtifactFile(file, id, bytes);
-    const parseResult =
-      bytes.length > MAX_SYNC_PARSE_BYTES
-        ? {
-            status: "Pending Parsing" as const,
-            parserError: `Queued for parsing because it exceeds the ${(MAX_SYNC_PARSE_BYTES / 1024 / 1024).toFixed(0)} MB synchronous parsing limit.`
-          }
-        : await parseArtifactBytes({
-            artifactId: id,
-            fileName: file.name,
-            mimeType: file.type || "application/octet-stream",
-            bytes
-          });
-    const extractedText = "content" in parseResult ? parseResult.content.text : undefined;
-    const fileType = kindFromFile(file);
-    const classification = classifyArtifactRecord({
-      artifactId: id,
-      fileName: file.name,
-      fileType,
-      mimeType: file.type || "application/octet-stream",
-      extractedText
-    });
+  try {
+    for (const file of files) {
+      const id = `artifact_${randomUUID()}`;
+      const bytes = Buffer.from(await file.arrayBuffer());
+      const stored = await storeArtifactFile(file, id, bytes);
+      const parseResult =
+        bytes.length > MAX_SYNC_PARSE_BYTES
+          ? {
+              status: "Pending Parsing" as const,
+              parserError: `Queued for parsing because it exceeds the ${(MAX_SYNC_PARSE_BYTES / 1024 / 1024).toFixed(0)} MB synchronous parsing limit.`
+            }
+          : await parseArtifactBytes({
+              artifactId: id,
+              fileName: file.name,
+              mimeType: file.type || "application/octet-stream",
+              bytes
+            });
+      const extractedText = "content" in parseResult ? parseResult.content.text : undefined;
+      const fileType = kindFromFile(file);
+      const classification = classifyArtifactRecord({
+        artifactId: id,
+        fileName: file.name,
+        fileType,
+        mimeType: file.type || "application/octet-stream",
+        extractedText
+      });
 
-    records.push({
-      id,
-      userId,
-      workspaceId,
-      fileName: file.name,
-      fileType,
-      mimeType: file.type || "application/octet-stream",
-      sizeBytes: file.size,
-      storageUrl: stored.storageUrl,
-      storageKey: stored.storageKey,
-      storageVisibility: stored.storageVisibility,
-      status: parseResult.status,
-      parserError: "parserError" in parseResult ? parseResult.parserError : null,
-      extractedContent: "content" in parseResult ? parseResult.content : null,
-      classification,
-      uploadedAt: now,
-      updatedAt: now
-    });
+      records.push({
+        id,
+        userId,
+        workspaceId,
+        fileName: file.name,
+        fileType,
+        mimeType: file.type || "application/octet-stream",
+        sizeBytes: file.size,
+        storageUrl: stored.storageUrl,
+        storageKey: stored.storageKey,
+        storageVisibility: stored.storageVisibility,
+        status: parseResult.status,
+        parserError: "parserError" in parseResult ? parseResult.parserError : null,
+        extractedContent: "content" in parseResult ? parseResult.content : null,
+        classification,
+        uploadedAt: now,
+        updatedAt: now
+      });
+    }
+  } catch (error) {
+    if (error instanceof StorageConfigurationError) {
+      return NextResponse.json({ error: error.message }, { status: 503 });
+    }
+
+    return NextResponse.json({ error: "Could not store uploaded artifacts." }, { status: 500 });
   }
 
   const artifacts = await createArtifactRecords(records);
