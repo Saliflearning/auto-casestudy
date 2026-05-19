@@ -4,6 +4,33 @@ import { FormEvent, useEffect, useState } from "react";
 import { ArrowRight, BadgeCheck, Camera, Database, Link as LinkIcon, SearchCheck } from "lucide-react";
 import { SiteNav } from "@/components/site-nav";
 import { PortfolioReference } from "@/lib/portfolio-reference-types";
+import { createReferenceFromUrl } from "@/lib/portfolio-reference-intelligence";
+
+const LOCAL_REFERENCE_KEY = "auto-casestudy-reference-backlog";
+
+function readLocalReferences() {
+  if (typeof window === "undefined") return [];
+  try {
+    return JSON.parse(window.localStorage.getItem(LOCAL_REFERENCE_KEY) ?? "[]") as PortfolioReference[];
+  } catch {
+    return [];
+  }
+}
+
+function writeLocalReferences(references: PortfolioReference[]) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(LOCAL_REFERENCE_KEY, JSON.stringify(references));
+}
+
+function makeLocalReference(url: string): PortfolioReference {
+  const now = new Date().toISOString();
+  return {
+    ...createReferenceFromUrl(url),
+    id: `local_reference_${crypto.randomUUID()}`,
+    createdAt: now,
+    updatedAt: now
+  };
+}
 
 export function ReferenceIntelligenceStudio() {
   const [url, setUrl] = useState("");
@@ -13,13 +40,23 @@ export function ReferenceIntelligenceStudio() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
+    const localReferences = readLocalReferences();
+    if (localReferences.length) setReferences(localReferences);
+
     fetch("/api/portfolio-references")
       .then((response) => response.json())
       .then((payload) => {
-        if (Array.isArray(payload.references)) setReferences(payload.references);
+        if (Array.isArray(payload.references) && payload.references.length) {
+          const merged = [
+            ...payload.references,
+            ...localReferences.filter((local) => !payload.references.some((remote: PortfolioReference) => remote.normalizedUrl === local.normalizedUrl))
+          ];
+          setReferences(merged);
+          writeLocalReferences(merged);
+        }
       })
       .catch(() => {
-        setError("Could not load portfolio references.");
+        if (!localReferences.length) setError("Could not load server references. You can still queue references in this browser.");
       });
   }, []);
 
@@ -38,11 +75,26 @@ export function ReferenceIntelligenceStudio() {
       });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error ?? "Could not ingest reference.");
-      setReferences((current) => [payload.reference as PortfolioReference, ...current.filter((item) => item.id !== payload.reference.id)]);
+      setReferences((current) => {
+        const next = [payload.reference as PortfolioReference, ...current.filter((item) => item.normalizedUrl !== payload.reference.normalizedUrl)];
+        writeLocalReferences(next);
+        return next;
+      });
       setUrl("");
       setStatus("Reference queued for screenshot capture and human review.");
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Could not ingest reference.");
+      try {
+        const localReference = makeLocalReference(url);
+        setReferences((current) => {
+          const next = [localReference, ...current.filter((item) => item.normalizedUrl !== localReference.normalizedUrl)];
+          writeLocalReferences(next);
+          return next;
+        });
+        setUrl("");
+        setStatus("Reference saved in this browser. Durable server storage will be added with the screenshot pipeline.");
+      } catch {
+        setError(caught instanceof Error ? caught.message : "Could not ingest reference.");
+      }
     } finally {
       setIsSubmitting(false);
     }
