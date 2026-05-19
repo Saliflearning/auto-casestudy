@@ -16,6 +16,7 @@ The project now uses formal product and engineering documents as the source of t
 - `docs/IMPLEMENTATION_PLAN.md`
 - `docs/STARTUP_QUALITY_SYSTEM.md`
 - `docs/ARCHITECTURE_DOCTRINE_EVIDENCE_FIRST.md`
+- `docs/AGENT_SKILLS_USAGE.md`
 
 Read these before making product, UX, architecture, schema, or release changes.
 
