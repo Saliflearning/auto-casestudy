@@ -6,6 +6,8 @@ Build an internal system that collects, organizes, and analyzes portfolio refere
 
 This is not a visual inspiration gallery. It is a structured portfolio intelligence dataset.
 
+It is also not traditional deep-learning model training at this stage. It is internal/admin intelligence infrastructure that gives the master portfolio agent structured guidance about archetypes, layouts, storytelling patterns, media rhythm, and recruiter readability.
+
 ## High-Level Map
 
 ```mermaid
@@ -62,6 +64,27 @@ Not implemented yet:
 - Human tag editing.
 - Search/filter UI.
 - Agent use of references during portfolio planning.
+
+## Product Doctrine
+
+The reference system exists behind the scenes to make generated portfolios dramatically better.
+
+It should help the agent understand:
+
+- project storytelling patterns
+- case study structures
+- section hierarchy
+- media placement patterns
+- recruiter-readable layouts
+- visual rhythm
+- navigation patterns
+- evidence presentation styles
+
+It should not become a public inspiration gallery, a template marketplace, or a copying mechanism.
+
+The user-facing promise remains:
+
+User uploads messy professional evidence -> the agent understands it -> the system reconstructs projects -> the system generates editable portfolio experiences.
 
 ## How To Reproduce It
 

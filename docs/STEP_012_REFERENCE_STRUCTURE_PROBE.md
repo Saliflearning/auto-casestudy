@@ -6,6 +6,8 @@ Move portfolio references from a passive URL backlog into an active capture pipe
 
 This step does not claim full screenshot intelligence yet. It safely visits a public portfolio URL, extracts basic page structure signals, stores them in the reference metadata record, and keeps screenshot status queued for the browser capture worker.
 
+The purpose is to support future agent planning, not to expose a normal user feature. Reference probes help build structured intelligence about how strong portfolio sites organize stories, pages, media, navigation, and recruiter-facing information.
+
 ## High-Level Map
 
 ```mermaid

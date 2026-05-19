@@ -85,7 +85,18 @@ Auto-CaseStudy affects professional identity and career opportunities. Therefore
 
 ## Portfolio Reference Intelligence
 
-Portfolio references are not collected for copying. They are collected to build a structured understanding of:
+Portfolio references are internal intelligence infrastructure. They are not a primary end-user feature, a visual inspiration gallery, or traditional deep-learning model training at this stage.
+
+They function as:
+
+- reference intelligence
+- structural guidance
+- archetype understanding
+- storytelling pattern memory
+- layout strategy guidance
+- recruiter-readable portfolio analysis
+
+Portfolio references are not collected for copying. They are collected to build a structured understanding of what excellent portfolios look like across professional archetypes:
 
 - portfolio archetypes
 - storytelling structures
@@ -95,7 +106,44 @@ Portfolio references are not collected for copying. They are collected to build 
 - technical depth signals
 - strong and weak project page patterns
 
-References guide agents. They do not replace user evidence and they must not be copied directly.
+Examples include UX Research portfolios, Product Design portfolios, Technical UX Hybrid portfolios, Cloud/Engineering portfolios, and Academic Research portfolios.
+
+The system should learn:
+
+- project storytelling patterns
+- case study structures
+- section hierarchy
+- media placement patterns
+- recruiter-readable layouts
+- visual rhythm
+- navigation patterns
+- evidence presentation styles
+
+This allows future generation systems to create portfolios that feel intentional, structured, believable, recruiter-friendly, and professionally designed rather than generic AI-generated pages.
+
+References guide agents. They do not replace user evidence, they do not become templates to copy, and they must not be copied directly.
+
+The two intelligence streams remain separate until planning:
+
+```mermaid
+flowchart LR
+  A["External portfolio references"] --> B["Reference intelligence dataset"]
+  B --> C["Layout and storytelling guidance"]
+  D["User professional evidence"] --> E["Evidence graph"]
+  E --> F["Grounded portfolio content"]
+  C --> G["Master portfolio planner"]
+  F --> G
+  G --> H["Editable portfolio website"]
+```
+
+The user-facing experience remains:
+
+```mermaid
+flowchart LR
+  A["User uploads messy professional evidence"] --> B["Agent understands it"]
+  B --> C["System reconstructs projects"]
+  C --> D["System generates editable portfolio experiences"]
+```
 
 ## Product Target
 
