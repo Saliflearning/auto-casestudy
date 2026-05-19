@@ -36,7 +36,8 @@ function uniqueLimited(values: string[], limit: number) {
 }
 
 function matches(html: string, pattern: RegExp) {
-  return Array.from(html.matchAll(pattern)).map((match) => match[1] ?? "");
+  const globalPattern = pattern.global ? pattern : new RegExp(pattern.source, `${pattern.flags}g`);
+  return Array.from(html.matchAll(globalPattern)).map((match) => match[1] ?? "");
 }
 
 function inferNavigationPatterns(html: string) {
