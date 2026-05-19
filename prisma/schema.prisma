@@ -267,3 +267,31 @@ model AuditLog {
   @@index([workspaceId, createdAt])
   @@index([entityType, entityId])
 }
+
+model PortfolioReference {
+  id                    String   @id
+  url                   String
+  normalizedUrl         String   @unique
+  title                 String
+  archetype             String
+  roleType              String
+  portfolioStyle        String
+  storytellingStructure String
+  layoutStructure       String
+  researchWeight        String
+  visualWeight          String
+  recruiterReadability  String
+  technicalDepth        String
+  captureStatus         String
+  screenshots           Json
+  metadata              Json
+  reviewTags            String[]
+  adminNotes            String
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([archetype])
+  @@index([portfolioStyle])
+  @@index([captureStatus])
+  @@index([createdAt])
+}
