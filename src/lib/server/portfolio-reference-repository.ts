@@ -3,7 +3,8 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { PortfolioReference } from "@/lib/portfolio-reference-types";
 
-const dataDir = process.env.VERCEL ? path.join("/tmp", "auto-casestudy") : path.join(process.cwd(), ".data");
+const isReadOnlyServerless = process.env.VERCEL === "1" || process.cwd().startsWith("/var/task");
+const dataDir = isReadOnlyServerless ? path.join("/tmp", "auto-casestudy") : path.join(process.cwd(), ".data");
 const manifestPath = path.join(dataDir, "portfolio-references.json");
 
 async function readLocalReferences(): Promise<PortfolioReference[]> {

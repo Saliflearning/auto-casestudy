@@ -23,6 +23,9 @@ export async function POST(request: NextRequest) {
     const reference = await createPortfolioReference(referenceInput);
     return NextResponse.json({ reference }, { status: 201 });
   } catch (error) {
+    if (error instanceof Error && error.message.includes("/var/task")) {
+      return NextResponse.json({ error: "Hosted reference storage is not ready yet. Save this reference in the browser backlog for now." }, { status: 503 });
+    }
     return NextResponse.json({ error: error instanceof Error ? error.message : "Could not ingest portfolio reference." }, { status: 400 });
   }
 }
