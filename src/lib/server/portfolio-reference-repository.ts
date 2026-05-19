@@ -116,3 +116,41 @@ export async function createPortfolioReference(input: Omit<PortfolioReference, "
   await writeLocalReferences(references);
   return reference;
 }
+
+export async function getPortfolioReference(referenceId: string) {
+  if (shouldUseDatabase()) {
+    const record = await prisma().portfolioReference.findUnique({
+      where: { id: referenceId }
+    });
+    return record ? recordToReference(record) : null;
+  }
+
+  const references = await readLocalReferences();
+  return references.find((reference) => reference.id === referenceId) ?? null;
+}
+
+export async function updatePortfolioReference(
+  referenceId: string,
+  patch: Partial<Omit<PortfolioReference, "id" | "createdAt" | "updatedAt">>
+) {
+  if (shouldUseDatabase()) {
+    const record = await prisma().portfolioReference.update({
+      where: { id: referenceId },
+      data: patch
+    });
+    return recordToReference(record);
+  }
+
+  const references = await readLocalReferences();
+  const index = references.findIndex((reference) => reference.id === referenceId);
+  if (index === -1) return null;
+
+  const updated: PortfolioReference = {
+    ...references[index],
+    ...patch,
+    updatedAt: new Date().toISOString()
+  };
+  references[index] = updated;
+  await writeLocalReferences(references);
+  return updated;
+}

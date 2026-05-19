@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { ArrowRight, BadgeCheck, Camera, Database, Link as LinkIcon, SearchCheck } from "lucide-react";
+import { ArrowRight, BadgeCheck, Camera, Database, Link as LinkIcon, Radar, SearchCheck } from "lucide-react";
 import { SiteNav } from "@/components/site-nav";
 import { PortfolioReference } from "@/lib/portfolio-reference-types";
 import { createReferenceFromUrl } from "@/lib/portfolio-reference-intelligence";
@@ -38,6 +38,7 @@ export function ReferenceIntelligenceStudio() {
   const [error, setError] = useState("");
   const [status, setStatus] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [capturingId, setCapturingId] = useState("");
 
   useEffect(() => {
     const localReferences = readLocalReferences();
@@ -97,6 +98,30 @@ export function ReferenceIntelligenceStudio() {
       }
     } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  async function captureReference(referenceId: string) {
+    setCapturingId(referenceId);
+    setError("");
+    setStatus("");
+
+    try {
+      const response = await fetch(`/api/portfolio-references/${referenceId}/capture`, {
+        method: "POST"
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error ?? "Could not probe reference.");
+      setReferences((current) => {
+        const next = current.map((reference) => (reference.id === referenceId ? (payload.reference as PortfolioReference) : reference));
+        writeLocalReferences(next);
+        return next;
+      });
+      setStatus("Reference structure probed. Screenshot capture is still queued for the browser worker.");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not probe reference.");
+    } finally {
+      setCapturingId("");
     }
   }
 
@@ -194,6 +219,22 @@ export function ReferenceIntelligenceStudio() {
                           {tag}
                         </span>
                       ))}
+                    </div>
+                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
+                      <p className="text-xs leading-5 text-muted">
+                        {reference.screenshots.some((screenshot) => screenshot.storageUrl)
+                          ? "Screenshot stored for review."
+                          : "Screenshot capture pending. Structure probe can collect page signals now."}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => captureReference(reference.id)}
+                        disabled={capturingId === reference.id || reference.id.startsWith("local_reference_")}
+                        className="inline-flex min-h-9 items-center justify-center gap-2 rounded-md border border-line bg-background px-3 text-xs font-semibold text-ink transition hover:border-primary/45 hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <Radar className="h-3.5 w-3.5" aria-hidden />
+                        {capturingId === reference.id ? "Probing..." : "Probe structure"}
+                      </button>
                     </div>
                   </article>
                 ))
