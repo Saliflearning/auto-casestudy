@@ -36,6 +36,10 @@ export type PortfolioReferenceScreenshot = {
   storageKey?: string;
   storageUrl?: string;
   capturedAt?: string;
+  viewport?: "desktop" | "mobile";
+  captureKind?: "viewport" | "full-page";
+  width?: number;
+  height?: number;
   status: PortfolioReferenceCaptureStatus;
 };
 

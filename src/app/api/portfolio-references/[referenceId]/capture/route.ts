@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { probeReferenceStructure } from "@/lib/server/reference-capture";
+import { captureReferenceScreenshots } from "@/lib/server/reference-screenshot-worker";
 import { getPortfolioReference, updatePortfolioReference } from "@/lib/server/portfolio-reference-repository";
 
 export const runtime = "nodejs";
@@ -10,16 +11,26 @@ type RouteContext = {
   }>;
 };
 
-export async function POST(_request: NextRequest, context: RouteContext) {
+async function captureMode(request: NextRequest) {
+  try {
+    const body = await request.json();
+    return typeof body === "object" && body !== null && "mode" in body ? String((body as { mode?: unknown }).mode) : "structure";
+  } catch {
+    return "structure";
+  }
+}
+
+export async function POST(request: NextRequest, context: RouteContext) {
   const { referenceId } = await context.params;
   const reference = await getPortfolioReference(referenceId);
+  const mode = await captureMode(request);
 
   if (!reference) {
     return NextResponse.json({ error: "Reference not found." }, { status: 404 });
   }
 
   try {
-    const probed = await probeReferenceStructure(reference);
+    const probed = mode === "screenshots" ? await captureReferenceScreenshots(reference) : await probeReferenceStructure(reference);
     const updated = await updatePortfolioReference(reference.id, {
       title: probed.title,
       captureStatus: probed.captureStatus,
