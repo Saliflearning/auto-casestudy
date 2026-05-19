@@ -15,6 +15,7 @@ The project now uses formal product and engineering documents as the source of t
 - `docs/BACKEND_SCHEMA.md`
 - `docs/IMPLEMENTATION_PLAN.md`
 - `docs/STARTUP_QUALITY_SYSTEM.md`
+- `docs/ARCHITECTURE_DOCTRINE_EVIDENCE_FIRST.md`
 
 Read these before making product, UX, architecture, schema, or release changes.
 
@@ -75,6 +76,7 @@ Completed step notes:
 - `docs/STEP_007_7_PORTFOLIO_PRODUCT_MODEL_HCI_REVIEW.md`
 - `docs/STEP_007_8_PRODUCT_ENGINEERING_DOCUMENTATION_FOUNDATION.md`
 - `docs/STEP_007_9_PRODUCT_SCOPE_ISOLATION.md`
+- `docs/STEP_008_PORTFOLIO_REFERENCE_INTELLIGENCE_SYSTEM.md`
 
 ## Local Development
 

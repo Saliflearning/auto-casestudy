@@ -103,6 +103,18 @@ Represents evidence relationships such as same project, same course/job, same to
 - MediaPlacement: selected section/page, order, size, crop/focal data.
 - Thumbnail: generated preview variants.
 
+## Portfolio Reference Intelligence Models
+
+Current foundation:
+
+- PortfolioReference: public URL, normalized URL, title, archetype, role type, style, capture status, review tags, admin notes.
+- PortfolioReferenceScreenshot: homepage/project page screenshot records, capture status, storage key, storage URL.
+- PortfolioReferenceMetadata: page structure, navigation patterns, media density, storytelling notes, hierarchy notes, recruiter observations, strengths, weaknesses.
+
+Future durable schema should move the current local `portfolio-references` dataset into PostgreSQL and store screenshots in private object storage.
+
+References guide planning agents. They must not be copied directly into generated portfolios.
+
 ## Event Models
 
 - ArtifactUploaded
