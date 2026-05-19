@@ -13,8 +13,8 @@ import { getWorkspaceId, workspaceCookieHeader } from "@/lib/server/workspace";
 export const runtime = "nodejs";
 
 const MAX_FILES_PER_REQUEST = Number(process.env.AUTOCASESTUDY_MAX_FILES_PER_REQUEST ?? 5);
-const MAX_FILE_BYTES = Number(process.env.AUTOCASESTUDY_MAX_FILE_BYTES ?? 15 * 1024 * 1024);
-const MAX_TOTAL_BYTES = Number(process.env.AUTOCASESTUDY_MAX_TOTAL_BYTES ?? 40 * 1024 * 1024);
+const MAX_FILE_BYTES = Number(process.env.AUTOCASESTUDY_MAX_FILE_BYTES ?? 4 * 1024 * 1024);
+const MAX_TOTAL_BYTES = Number(process.env.AUTOCASESTUDY_MAX_TOTAL_BYTES ?? 4 * 1024 * 1024);
 const MAX_SYNC_PARSE_BYTES = Number(process.env.AUTOCASESTUDY_MAX_SYNC_PARSE_BYTES ?? 8 * 1024 * 1024);
 
 const acceptedTypesByExtension: Record<string, string[]> = {

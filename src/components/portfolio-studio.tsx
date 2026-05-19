@@ -62,6 +62,10 @@ const personas: Persona[] = [
 ];
 
 const themes: PortfolioTheme[] = ["Instrument Dark", "Editorial Light", "Recruiter Clean"];
+const MAX_UPLOAD_FILES = 5;
+const MAX_BROWSER_FILE_BYTES = 4 * 1024 * 1024;
+const MAX_BROWSER_BATCH_BYTES = 4 * 1024 * 1024;
+const ACCEPTED_UPLOAD_EXTENSIONS = new Set(["pdf", "docx", "pptx", "png", "jpg", "jpeg", "webp"]);
 
 const workflow = [
   { id: "ingest", label: "Inbox", icon: Upload },
@@ -82,6 +86,52 @@ function getClientWorkspaceId() {
   const created = `workspace_${crypto.randomUUID()}`;
   window.localStorage.setItem(key, created);
   return created;
+}
+
+function formatBytes(bytes: number) {
+  return `${(bytes / 1024 / 1024).toFixed(bytes >= 1024 * 1024 ? 1 : 2)} MB`;
+}
+
+function fileExtension(fileName: string) {
+  return fileName.split(".").pop()?.toLowerCase() ?? "";
+}
+
+function validateBrowserUpload(files: File[]) {
+  if (files.length > MAX_UPLOAD_FILES) {
+    return `Upload ${MAX_UPLOAD_FILES} files or fewer at a time.`;
+  }
+
+  const unsupported = files.filter((file) => !ACCEPTED_UPLOAD_EXTENSIONS.has(fileExtension(file.name)));
+  if (unsupported.length) {
+    return `Unsupported file type: ${unsupported.map((file) => file.name).join(", ")}. Use PDF, DOCX, PPTX, PNG, JPG, or WebP.`;
+  }
+
+  const oversized = files.find((file) => file.size > MAX_BROWSER_FILE_BYTES);
+  if (oversized) {
+    return `${oversized.name} is ${formatBytes(oversized.size)}. Upload files up to ${formatBytes(MAX_BROWSER_FILE_BYTES)} each for this Vercel MVP.`;
+  }
+
+  const totalBytes = files.reduce((sum, file) => sum + file.size, 0);
+  if (totalBytes > MAX_BROWSER_BATCH_BYTES) {
+    return `This upload is ${formatBytes(totalBytes)}. Upload up to ${formatBytes(MAX_BROWSER_BATCH_BYTES)} per batch for this Vercel MVP.`;
+  }
+
+  return "";
+}
+
+async function readUploadResponse(response: Response) {
+  const contentType = response.headers.get("content-type") ?? "";
+  if (contentType.includes("application/json")) {
+    return response.json();
+  }
+
+  const text = await response.text();
+  return {
+    error:
+      response.status === 413 || text.toLowerCase().includes("request entity")
+        ? `Upload is too large for the hosted MVP. Try one smaller file, up to ${formatBytes(MAX_BROWSER_FILE_BYTES)}.`
+        : text || `Upload failed with status ${response.status}.`
+  };
 }
 
 const cognitionModes = [
@@ -189,6 +239,13 @@ export function PortfolioStudio() {
   async function uploadFiles(files: File[]) {
     if (!files.length) return;
 
+    const validationError = validateBrowserUpload(files);
+    if (validationError) {
+      setUploadError(validationError);
+      setUploadSuccess("");
+      return;
+    }
+
     const form = new FormData();
     files.forEach((file) => form.append("files", file));
     setIsUploading(true);
@@ -201,7 +258,7 @@ export function PortfolioStudio() {
         headers: { "x-autocasestudy-workspace": getClientWorkspaceId() },
         body: form
       });
-      const payload = await response.json();
+      const payload = await readUploadResponse(response);
       if (!response.ok) {
         throw new Error(payload.error ?? "Upload failed.");
       }
@@ -788,7 +845,7 @@ function IngestionPanel({
               <Upload className="h-6 w-6" aria-hidden />
             </span>
             <span className="mt-4 text-xl font-semibold text-ink">{isUploading ? "Uploading..." : "Drag files here or click to upload"}</span>
-            <span className="mt-2 max-w-md text-sm leading-6 text-muted">PDF, DOCX, PPTX, PNG, JPG, or WebP.</span>
+            <span className="mt-2 max-w-md text-sm leading-6 text-muted">PDF, DOCX, PPTX, PNG, JPG, or WebP. Up to {formatBytes(MAX_BROWSER_FILE_BYTES)} per file.</span>
             <span className="mt-5 inline-flex min-h-11 items-center rounded-md bg-primary px-4 font-semibold text-slateInk">
               Choose artifacts
             </span>
@@ -801,7 +858,7 @@ function IngestionPanel({
               disabled={isUploading}
             />
           </label>
-          <p className="mt-3 text-xs leading-5 text-faint">Parser status appears in Review.</p>
+          <p className="mt-3 text-xs leading-5 text-faint">Parser status appears in Review. Upload large files one at a time or compress them first.</p>
       </div>
       {uploadError ? (
         <p className="mt-4 rounded-md border border-danger/25 bg-danger/10 p-3 text-sm text-danger" role="alert">
