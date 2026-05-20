@@ -143,4 +143,23 @@ export type Gap = {
   action: string;
 };
 
+export type UnderstandingBacklogItem = {
+  id: string;
+  category:
+    | "Project reconstruction"
+    | "Portfolio planning"
+    | "Evidence gap"
+    | "Media placement"
+    | "Recruiter readability"
+    | "Guardrail";
+  priority: "Critical" | "High" | "Medium" | "Low";
+  status: "Needs evidence" | "Needs review" | "Ready for planning" | "Blocked";
+  title: string;
+  rationale: string;
+  suggestedAction: string;
+  sourceArtifactIds: string[];
+  relatedClusterIds: string[];
+  outputTarget: "Home" | "Projects" | "Case Study" | "Resume" | "Skills" | "Publish Readiness";
+};
+
 export type PortfolioTheme = "Instrument Dark" | "Editorial Light" | "Recruiter Clean";

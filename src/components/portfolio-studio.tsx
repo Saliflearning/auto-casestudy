@@ -48,7 +48,8 @@ import {
 } from "lucide-react";
 import { ChangeEvent, DragEvent, FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
-import { Artifact, ArtifactRelationship, CaseStudySection, Persona, PortfolioTheme, ProjectCluster } from "@/lib/types";
+import { Artifact, ArtifactRelationship, CaseStudySection, Persona, PortfolioTheme, ProjectCluster, UnderstandingBacklogItem } from "@/lib/types";
+import { buildUnderstandingBacklog } from "@/lib/understanding-backlog";
 import { useGaps, usePortfolioStore } from "@/store/use-portfolio-store";
 
 const personas: Persona[] = [
@@ -214,6 +215,10 @@ export function PortfolioStudio() {
       coverage: Math.max(42, Math.min(96, sourceSignals - gaps.length * 7 + supported * 3))
     };
   }, [artifacts, sections, gaps.length]);
+  const understandingBacklog = useMemo(
+    () => buildUnderstandingBacklog({ artifacts, sections, gaps, clusters }),
+    [artifacts, sections, gaps, clusters]
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -314,6 +319,7 @@ export function PortfolioStudio() {
         <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
           <div className="space-y-6">
             <AgentIntelligence artifacts={artifacts} gaps={gaps} lastAgentAction={lastAgentAction} />
+            <UnderstandingBacklogPanel backlog={understandingBacklog} artifacts={artifacts} />
             <EvidenceMapPanel
               artifacts={artifacts}
               clusters={clusters}
@@ -942,6 +948,76 @@ function AgentIntelligence({
             </div>
           ))}
         </div>
+      </div>
+    </section>
+  );
+}
+
+function UnderstandingBacklogPanel({
+  backlog,
+  artifacts
+}: {
+  backlog: UnderstandingBacklogItem[];
+  artifacts: Artifact[];
+}) {
+  const artifactMap = new Map(artifacts.map((artifact) => [artifact.id, artifact]));
+  const criticalCount = backlog.filter((item) => item.priority === "Critical" || item.priority === "High").length;
+
+  return (
+    <section className="rounded-lg border border-line bg-surface p-5" aria-label="Understanding backlog">
+      <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="text-xs uppercase tracking-[0.18em] text-primary">Understanding backlog</p>
+          <h2 className="mt-2 text-2xl font-semibold">What the agent needs before generation</h2>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
+            Structured intelligence tasks that connect evidence, portfolio planning, recruiter readability, and guardrails before writing pages.
+          </p>
+        </div>
+        <span className="rounded-full border border-line bg-panel px-3 py-1 text-sm text-muted">
+          {criticalCount} priority item{criticalCount === 1 ? "" : "s"}
+        </span>
+      </div>
+
+      <div className="grid gap-3 lg:grid-cols-2">
+        {backlog.slice(0, 8).map((item) => (
+          <article key={item.id} className="rounded-md border border-line bg-panel p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-xs uppercase tracking-[0.16em] text-primary">{item.category}</p>
+                <h3 className="mt-1 text-base font-semibold text-ink">{item.title}</h3>
+              </div>
+              <span
+                className={cn(
+                  "rounded-full px-2.5 py-1 text-xs font-semibold",
+                  item.priority === "Critical"
+                    ? "bg-danger/15 text-danger"
+                    : item.priority === "High"
+                      ? "bg-amber/15 text-amber"
+                      : "bg-emerald/15 text-emerald"
+                )}
+              >
+                {item.priority}
+              </span>
+            </div>
+            <p className="mt-3 text-sm leading-6 text-muted">{item.rationale}</p>
+            <div className="mt-3 rounded-md border border-line bg-background p-3">
+              <p className="text-xs uppercase tracking-[0.14em] text-faint">Next action</p>
+              <p className="mt-1 text-sm leading-6 text-ink">{item.suggestedAction}</p>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <span className="rounded-full border border-line bg-background px-2 py-1 text-xs text-muted">{item.status}</span>
+              <span className="rounded-full border border-line bg-background px-2 py-1 text-xs text-muted">{item.outputTarget}</span>
+              {item.sourceArtifactIds.slice(0, 3).map((artifactId) => {
+                const artifact = artifactMap.get(artifactId);
+                return artifact ? (
+                  <span key={artifactId} className="rounded-full border border-primary/20 bg-primary/10 px-2 py-1 text-xs text-primary">
+                    {artifact.sourceLabel}
+                  </span>
+                ) : null;
+              })}
+            </div>
+          </article>
+        ))}
       </div>
     </section>
   );
