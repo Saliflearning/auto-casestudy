@@ -54,6 +54,7 @@ import { buildPortfolioStrategyPlan } from "@/lib/portfolio-planning-engine";
 import { buildConfirmedPortfolioBlueprint } from "@/lib/portfolio-review-engine";
 import { PortfolioBlueprintRecord, PortfolioBlueprintReviewState } from "@/lib/portfolio-blueprint-types";
 import { GenerationReadinessResult } from "@/lib/generation-readiness";
+import { GeneratedCaseStudyDraft } from "@/lib/case-study-generation-types";
 import { PortfolioArchetype, PortfolioStrategyPlan } from "@/lib/portfolio-strategy-types";
 import { useBlueprintReviewStore } from "@/store/blueprint-review-store";
 import { useGaps, usePortfolioStore } from "@/store/use-portfolio-store";
@@ -394,6 +395,7 @@ export function PortfolioStudio() {
         title="Edit portfolio pages"
         detail="Tune page briefs, then refine the case study canvas."
       >
+        <CaseStudyDraftWorkspace />
         <EditorPanel
           sections={sections}
           artifacts={artifacts}
@@ -1258,6 +1260,170 @@ function PortfolioReviewWorkspace({ plan, artifacts }: { plan: PortfolioStrategy
           ))}
         </div>
       </div>
+    </section>
+  );
+}
+
+function CaseStudyDraftWorkspace() {
+  const [draft, setDraft] = useState<GeneratedCaseStudyDraft | null>(null);
+  const [status, setStatus] = useState<"idle" | "loading" | "generating" | "error">("loading");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadDraft() {
+      try {
+        const response = await fetch("/api/generation/case-study", {
+          cache: "no-store",
+          headers: { "x-autocasestudy-workspace": getClientWorkspaceId() }
+        });
+        const payload = await response.json();
+        if (!cancelled) {
+          setDraft(payload.draft ?? null);
+          setStatus("idle");
+        }
+      } catch {
+        if (!cancelled) setStatus("idle");
+      }
+    }
+    loadDraft();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function generateDraft() {
+    setStatus("generating");
+    setError("");
+    try {
+      const response = await fetch("/api/generation/case-study", {
+        method: "POST",
+        headers: { "x-autocasestudy-workspace": getClientWorkspaceId() }
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        const details = payload?.error?.details;
+        const firstIssue = details?.issues?.[0]?.message;
+        throw new Error(firstIssue ?? payload?.error?.message ?? "Case study generation is blocked.");
+      }
+      setDraft(payload.draft);
+      setStatus("idle");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Case study generation is blocked.");
+      setStatus("error");
+    }
+  }
+
+  function updateSection(sectionId: string, content: string) {
+    setDraft((current) =>
+      current
+        ? {
+            ...current,
+            sections: current.sections.map((section) => (section.id === sectionId ? { ...section, content } : section)),
+            updatedAt: new Date().toISOString()
+          }
+        : current
+    );
+  }
+
+  return (
+    <section className="mb-6 rounded-lg border border-line bg-surface p-5" aria-label="Case study draft workspace">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="text-xs uppercase tracking-[0.18em] text-primary">Case study draft workspace</p>
+          <h2 className="mt-2 text-2xl font-semibold">Generate one evidence-backed project story</h2>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
+            Uses only the persisted blueprint after the readiness gate. Missing proof stays visible instead of being invented.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={generateDraft}
+          disabled={status === "generating"}
+          className="inline-flex min-h-10 items-center gap-2 rounded-md border border-primary/30 bg-primary/15 px-3 text-sm font-semibold text-primary transition hover:bg-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          <WandSparkles className="h-4 w-4" aria-hidden />
+          {status === "generating" ? "Generating..." : "Generate case study"}
+        </button>
+      </div>
+
+      {error ? <p className="mt-4 rounded-md border border-danger/25 bg-danger/10 p-3 text-sm text-danger">{error}</p> : null}
+
+      {draft ? (
+        <div className="mt-5 grid gap-4 xl:grid-cols-[1fr_320px]">
+          <div className="space-y-3">
+            <div className="rounded-md border border-line bg-panel p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.16em] text-primary">{draft.archetype}</p>
+                  <h3 className="mt-1 text-xl font-semibold">{draft.title}</h3>
+                </div>
+                <span className={cn("rounded-full px-2.5 py-1 text-xs font-semibold", draft.status === "Draft" ? "bg-emerald/15 text-emerald" : "bg-amber/15 text-amber")}>
+                  {draft.status}
+                </span>
+              </div>
+              <p className="mt-2 text-sm text-muted">Blueprint v{draft.blueprintVersion} - {draft.sections.length} editable sections - {draft.provenance.length} provenance references</p>
+            </div>
+
+            {draft.sections.map((section) => (
+              <article key={section.id} className="rounded-md border border-line bg-panel p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.14em] text-faint">{section.type}</p>
+                    <h4 className="mt-1 font-semibold text-ink">{section.title}</h4>
+                  </div>
+                  <span className={cn("rounded-full px-2 py-1 text-xs", section.confidence === "confirmed" ? "bg-emerald/15 text-emerald" : section.confidence === "inferred" ? "bg-primary/10 text-primary" : "bg-amber/15 text-amber")}>
+                    {section.confidence}
+                  </span>
+                </div>
+                <textarea
+                  value={section.content}
+                  onChange={(event) => updateSection(section.id, event.target.value)}
+                  className="mt-3 min-h-28 w-full resize-y rounded-md border border-line bg-background p-3 text-sm leading-6 text-ink"
+                />
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {section.provenance.slice(0, 4).map((source) => (
+                    <span key={`${section.id}-${source.artifactId ?? source.label}`} className="rounded-full border border-line bg-background px-2 py-1 text-xs text-muted">
+                      {source.label}
+                    </span>
+                  ))}
+                </div>
+                {section.missingEvidence.length || section.unsupportedClaims.length ? (
+                  <div className="mt-3 rounded-md border border-amber/25 bg-amber/10 p-3 text-xs leading-5 text-amber">
+                    {[...section.missingEvidence, ...section.unsupportedClaims].join(" ")}
+                  </div>
+                ) : null}
+              </article>
+            ))}
+          </div>
+
+          <aside className="space-y-4">
+            <div className="rounded-md border border-line bg-panel p-4">
+              <p className="text-xs uppercase tracking-[0.16em] text-primary">Unresolved issues</p>
+              <div className="mt-3 space-y-2">
+                {draft.unresolvedIssues.length ? draft.unresolvedIssues.map((item) => (
+                  <p key={item} className="rounded-md border border-amber/25 bg-amber/10 p-2 text-xs leading-5 text-amber">{item}</p>
+                )) : <p className="text-sm text-muted">No unresolved generation issues recorded.</p>}
+              </div>
+            </div>
+            <div className="rounded-md border border-line bg-panel p-4">
+              <p className="text-xs uppercase tracking-[0.16em] text-primary">Media placement preview</p>
+              <div className="mt-3 space-y-2">
+                {draft.media.length ? draft.media.map((media) => (
+                  <div key={media.id} className="rounded-md border border-line bg-background p-3">
+                    <p className="text-sm font-semibold text-ink">{media.placement}</p>
+                    <p className="mt-1 text-xs leading-5 text-muted">{media.caption}</p>
+                  </div>
+                )) : <p className="text-sm text-muted">No approved media available for this draft yet.</p>}
+              </div>
+            </div>
+          </aside>
+        </div>
+      ) : (
+        <div className="mt-5 rounded-md border border-line bg-panel p-4 text-sm text-muted">
+          No case study draft yet. Save a confirmed blueprint, pass the readiness gate, then generate one constrained project story.
+        </div>
+      )}
     </section>
   );
 }

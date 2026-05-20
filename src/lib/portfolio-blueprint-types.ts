@@ -80,7 +80,7 @@ export type BlueprintAuditEventRecord = {
   blueprintId?: string;
   revisionId?: string;
   actorId?: string;
-  action: "BLUEPRINT_SAVED" | "BLUEPRINT_ROLLED_BACK" | "GENERATION_READINESS_CHECKED" | "GENERATION_BLOCKED";
+  action: "BLUEPRINT_SAVED" | "BLUEPRINT_ROLLED_BACK" | "GENERATION_READINESS_CHECKED" | "GENERATION_BLOCKED" | "CASE_STUDY_GENERATED";
   before?: unknown;
   after?: unknown;
   createdAt: string;
