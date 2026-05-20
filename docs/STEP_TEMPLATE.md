@@ -1,6 +1,6 @@
 # Step Title
 
-## High-Level Map
+## High-Level Architecture Diagram
 
 ```mermaid
 flowchart LR
@@ -12,7 +12,23 @@ flowchart LR
   User --> App
   App --> Agent
   Agent --> Output
-  Output --> User
+Output --> User
+```
+
+## Data Flow Map
+
+```mermaid
+sequenceDiagram
+  participant User
+  participant UI
+  participant API
+  participant Storage
+  participant Database
+  User->>UI: Initiates workflow
+  UI->>API: Sends validated request
+  API->>Storage: Stores durable files when needed
+  API->>Database: Stores metadata and status
+  Database-->>UI: Returns updated state
 ```
 
 ## Tech Stack Used
@@ -22,6 +38,12 @@ flowchart LR
 - Data/parsing:
 - Agent/AI:
 - Deployment:
+
+## Why This Stack Was Chosen
+
+- Choice 1:
+- Choice 2:
+- Trade-off:
 
 ## What Each Part Does
 
@@ -54,6 +76,12 @@ Open `http://localhost:3000`.
 - Broken/dead buttons checked:
 - Mobile/responsive behavior checked:
 - Accessibility basics checked:
+
+## Failure Modes
+
+- Failure mode:
+- User-visible response:
+- Recovery path:
 
 ## Feasibility Notes
 

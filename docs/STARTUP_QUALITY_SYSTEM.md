@@ -110,13 +110,56 @@ These roles may be simulated at first, but every major step should be reviewed t
 
 Every major step must include:
 
-- High-level diagram/map.
+- High-level architecture diagram.
+- Data flow map.
 - Tech stack used.
+- Why this stack was chosen.
 - What each part does.
 - How to reproduce it.
 - Security/privacy notes.
 - QA checklist.
+- Failure modes.
 - Feasibility notes.
 - What comes next.
 
+Diagrams should become more visual and high-fidelity over time, especially for:
+
+- evidence graph pipeline
+- upload and parsing pipeline
+- reference intelligence pipeline
+- screenshot capture worker
+- agent orchestration flow
+- guardrail validation flow
+- portfolio generation and publishing flow
+
 Use `docs/STEP_TEMPLATE.md` for new implementation milestones.
+
+## Browser Automation Rule
+
+Dedicated Chrome/Edge automation is allowed for internal/admin tasks only.
+
+Allowed:
+
+- capturing portfolio reference screenshots
+- testing layouts
+- debugging frontend behavior
+- running controlled Playwright jobs
+- visual QA
+- checking live Vercel behavior
+
+Not allowed yet:
+
+- public user-triggered browsing
+- unrestricted URL scraping
+- autonomous browsing without validation
+- browser automation tied to private user artifacts without access controls
+
+Any browser automation must include:
+
+- URL validation
+- private/localhost/IP blocking
+- timeout limits
+- clear error handling
+- admin-only access
+- logging
+- rate limiting later

@@ -22,6 +22,26 @@ flowchart LR
   H --> I["Future visual analysis agent"]
 ```
 
+## Data Flow Map
+
+```mermaid
+sequenceDiagram
+  participant Admin
+  participant ReferencesUI as References UI
+  participant CaptureAPI as Capture API
+  participant Browser as Chrome/Edge Worker
+  participant Storage as Screenshot Storage
+  participant DB as Postgres
+  Admin->>ReferencesUI: Clicks Capture screenshots
+  ReferencesUI->>CaptureAPI: POST mode=screenshots
+  CaptureAPI->>DB: Load reference URL and metadata
+  CaptureAPI->>Browser: Open validated public URL
+  Browser-->>CaptureAPI: PNG buffers
+  CaptureAPI->>Storage: Store desktop/mobile screenshots
+  CaptureAPI->>DB: Save screenshot metadata
+  DB-->>ReferencesUI: Captured reference record
+```
+
 ## Tech Stack Used
 
 - `playwright-core` for controlling an installed Chrome/Edge browser.
@@ -29,6 +49,13 @@ flowchart LR
 - Existing `storeReferenceScreenshot` storage utility.
 - Postgres JSON screenshot metadata.
 - Local `.data/reference-screenshots` fallback for development.
+
+## Why This Stack Was Chosen
+
+- `playwright-core` gives deterministic browser control without forcing bundled browser downloads into the app package.
+- An installed Chrome/Edge executable keeps local capture lightweight and works with a dedicated admin browser window.
+- The existing storage abstraction keeps screenshots separate from metadata and prepares for Blob/S3 migration.
+- Postgres keeps the captured screenshot records queryable for future visual analysis and human review.
 
 ## What Each Part Does
 
@@ -76,6 +103,8 @@ These captures support future analysis of:
 - Browser automation has different abuse risk than metadata probing, so the worker must remain admin/internal.
 - Production serverless browser support may require a dedicated worker runtime.
 - Screenshot files should be treated as reference material, not source templates.
+- Browser automation must not be exposed to normal users yet.
+- URL validation, private/localhost/IP blocking, timeout limits, clear errors, admin-only access, logging, and later rate limiting are required for browser automation work.
 
 ## QA Checklist
 
@@ -85,6 +114,14 @@ These captures support future analysis of:
 - Screenshot metadata includes viewport, capture kind, timestamp, and dimensions.
 - Local development stores screenshots under `.data/reference-screenshots`.
 - Hosted capture requires durable screenshot storage.
+
+## Failure Modes
+
+- Browser executable missing: return a clear configuration error and do not mark screenshots as captured.
+- Target site blocks automation: mark capture failed and preserve the reference for human review.
+- Screenshot storage unavailable: return a storage configuration error and do not drop metadata silently.
+- Navigation timeout: mark capture failed with a concise reason.
+- Public URL later becomes unavailable: keep the existing reference record and require re-review.
 
 ## What Comes Next
 
