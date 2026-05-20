@@ -55,6 +55,7 @@ import { buildConfirmedPortfolioBlueprint } from "@/lib/portfolio-review-engine"
 import { PortfolioBlueprintRecord, PortfolioBlueprintReviewState } from "@/lib/portfolio-blueprint-types";
 import { GenerationReadinessResult } from "@/lib/generation-readiness";
 import { GeneratedCaseStudyDraft } from "@/lib/case-study-generation-types";
+import { CaseStudyQualityReport } from "@/lib/case-study-quality-types";
 import { PortfolioArchetype, PortfolioStrategyPlan } from "@/lib/portfolio-strategy-types";
 import { useBlueprintReviewStore } from "@/store/blueprint-review-store";
 import { useGaps, usePortfolioStore } from "@/store/use-portfolio-store";
@@ -1266,7 +1267,9 @@ function PortfolioReviewWorkspace({ plan, artifacts }: { plan: PortfolioStrategy
 
 function CaseStudyDraftWorkspace() {
   const [draft, setDraft] = useState<GeneratedCaseStudyDraft | null>(null);
+  const [qualityReport, setQualityReport] = useState<CaseStudyQualityReport | null>(null);
   const [status, setStatus] = useState<"idle" | "loading" | "generating" | "error">("loading");
+  const [qualityStatus, setQualityStatus] = useState<"idle" | "evaluating" | "error">("idle");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -1281,6 +1284,9 @@ function CaseStudyDraftWorkspace() {
         if (!cancelled) {
           setDraft(payload.draft ?? null);
           setStatus("idle");
+          if (payload.draft) {
+            void loadQualityReport();
+          }
         }
       } catch {
         if (!cancelled) setStatus("idle");
@@ -1307,10 +1313,45 @@ function CaseStudyDraftWorkspace() {
         throw new Error(firstIssue ?? payload?.error?.message ?? "Case study generation is blocked.");
       }
       setDraft(payload.draft);
+      setQualityReport(null);
       setStatus("idle");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Case study generation is blocked.");
       setStatus("error");
+    }
+  }
+
+  async function loadQualityReport() {
+    try {
+      const response = await fetch("/api/generation/case-study-quality/latest", {
+        cache: "no-store",
+        headers: { "x-autocasestudy-workspace": getClientWorkspaceId() }
+      });
+      if (!response.ok) return;
+      const payload = await response.json();
+      setQualityReport(payload.report ?? null);
+    } catch {
+      // Quality reports are optional until the user evaluates the draft.
+    }
+  }
+
+  async function evaluateDraft() {
+    if (!draft) return;
+    setQualityStatus("evaluating");
+    setError("");
+    try {
+      const response = await fetch("/api/generation/evaluate-case-study", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-autocasestudy-workspace": getClientWorkspaceId() },
+        body: JSON.stringify({ draftId: draft.id })
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload?.error?.message ?? "Could not evaluate case study quality.");
+      setQualityReport(payload.report);
+      setQualityStatus("idle");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not evaluate case study quality.");
+      setQualityStatus("error");
     }
   }
 
@@ -1352,6 +1393,7 @@ function CaseStudyDraftWorkspace() {
       {draft ? (
         <div className="mt-5 grid gap-4 xl:grid-cols-[1fr_320px]">
           <div className="space-y-3">
+            <CaseStudyQualityPanel report={qualityReport} onEvaluate={evaluateDraft} isEvaluating={qualityStatus === "evaluating"} />
             <div className="rounded-md border border-line bg-panel p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
@@ -1423,6 +1465,106 @@ function CaseStudyDraftWorkspace() {
         <div className="mt-5 rounded-md border border-line bg-panel p-4 text-sm text-muted">
           No case study draft yet. Save a confirmed blueprint, pass the readiness gate, then generate one constrained project story.
         </div>
+      )}
+    </section>
+  );
+}
+
+function CaseStudyQualityPanel({
+  report,
+  onEvaluate,
+  isEvaluating
+}: {
+  report: CaseStudyQualityReport | null;
+  onEvaluate: () => void;
+  isEvaluating: boolean;
+}) {
+  const scoreItems = report
+    ? [
+        ["Structure", report.scores.structural],
+        ["Evidence", report.scores.evidence],
+        ["Recruiter", report.scores.recruiter],
+        ["Archetype", report.scores.archetype],
+        ["Writing", report.scores.writing],
+        ["Media", report.scores.media]
+      ]
+    : [];
+
+  return (
+    <section className="rounded-md border border-line bg-panel p-4" aria-label="Case study quality evaluation">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-xs uppercase tracking-[0.16em] text-primary">Quality evaluation</p>
+          <h3 className="mt-1 text-lg font-semibold">
+            {report ? `${report.readiness} - ${report.scores.overall}%` : "Not evaluated yet"}
+          </h3>
+          <p className="mt-1 text-sm leading-6 text-muted">
+            Scores the draft like a portfolio review board: evidence, recruiter clarity, archetype fit, media, writing, and publish risk.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onEvaluate}
+          disabled={isEvaluating}
+          className="min-h-9 rounded-md border border-primary/30 bg-primary/15 px-3 text-xs font-semibold text-primary hover:bg-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isEvaluating ? "Evaluating..." : "Evaluate quality"}
+        </button>
+      </div>
+
+      {report ? (
+        <>
+          <div className="mt-4 grid gap-2 sm:grid-cols-3 lg:grid-cols-6">
+            {scoreItems.map(([label, score]) => (
+              <div key={label as string} className="rounded-md border border-line bg-background p-3">
+                <p className="text-xs uppercase tracking-[0.12em] text-faint">{label as string}</p>
+                <p className={cn("mt-1 text-lg font-semibold", (score as number) < 55 ? "text-danger" : (score as number) < 75 ? "text-amber" : "text-emerald")}>{score as number}%</p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 grid gap-3 lg:grid-cols-3">
+            <div className="rounded-md border border-line bg-background p-3">
+              <p className="text-xs uppercase tracking-[0.14em] text-faint">Publish risk</p>
+              <p className={cn("mt-1 font-semibold", report.publishRisk === "high" ? "text-danger" : report.publishRisk === "medium" ? "text-amber" : "text-emerald")}>{report.publishRisk}</p>
+            </div>
+            <div className="rounded-md border border-line bg-background p-3">
+              <p className="text-xs uppercase tracking-[0.14em] text-faint">Blockers</p>
+              <p className="mt-1 font-semibold text-ink">{report.blockers.length}</p>
+            </div>
+            <div className="rounded-md border border-line bg-background p-3">
+              <p className="text-xs uppercase tracking-[0.14em] text-faint">Confidence</p>
+              <p className="mt-1 font-semibold text-ink">{report.confidenceScore}%</p>
+            </div>
+          </div>
+          <div className="mt-4 grid gap-3 lg:grid-cols-2">
+            <div>
+              <p className="text-xs uppercase tracking-[0.14em] text-faint">Revision priorities</p>
+              <div className="mt-2 space-y-2">
+                {report.revisionSuggestions.slice(0, 5).map((item) => (
+                  <div key={item.id} className={cn("rounded-md border p-3 text-xs leading-5", item.severity === "blocker" ? "border-danger/25 bg-danger/10 text-danger" : item.severity === "major" ? "border-amber/25 bg-amber/10 text-amber" : "border-line bg-background text-muted")}>
+                    <strong className="block text-ink">{item.message}</strong>
+                    {item.suggestion}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-[0.14em] text-faint">Evidence risks</p>
+              <div className="mt-2 space-y-2">
+                {[...report.unsupportedClaims, ...report.provenanceGaps].slice(0, 5).map((item) => (
+                  <p key={item} className="rounded-md border border-line bg-background p-3 text-xs leading-5 text-muted">{item}</p>
+                ))}
+                {!report.unsupportedClaims.length && !report.provenanceGaps.length ? (
+                  <p className="rounded-md border border-emerald/25 bg-emerald/10 p-3 text-xs text-emerald">No major unsupported claim or provenance gap was detected.</p>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        </>
+      ) : (
+        <p className="mt-4 rounded-md border border-line bg-background p-3 text-sm text-muted">
+          Generate or load a draft, then evaluate it before treating it as portfolio-ready.
+        </p>
       )}
     </section>
   );
