@@ -50,6 +50,8 @@ import { ChangeEvent, DragEvent, FormEvent, ReactNode, useEffect, useMemo, useSt
 import { cn } from "@/lib/utils";
 import { Artifact, ArtifactRelationship, CaseStudySection, Persona, PortfolioTheme, ProjectCluster, UnderstandingBacklogItem } from "@/lib/types";
 import { buildUnderstandingBacklog } from "@/lib/understanding-backlog";
+import { buildPortfolioStrategyPlan } from "@/lib/portfolio-planning-engine";
+import { PortfolioStrategyPlan } from "@/lib/portfolio-strategy-types";
 import { useGaps, usePortfolioStore } from "@/store/use-portfolio-store";
 
 const personas: Persona[] = [
@@ -219,6 +221,10 @@ export function PortfolioStudio() {
     () => buildUnderstandingBacklog({ artifacts, sections, gaps, clusters }),
     [artifacts, sections, gaps, clusters]
   );
+  const portfolioPlan = useMemo(
+    () => buildPortfolioStrategyPlan({ persona, artifacts, sections, clusters, gaps, backlog: understandingBacklog }),
+    [persona, artifacts, sections, clusters, gaps, understandingBacklog]
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -340,6 +346,7 @@ export function PortfolioStudio() {
       >
         <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
           <div className="space-y-6">
+            <PortfolioPlanPanel plan={portfolioPlan} artifacts={artifacts} />
             <PortfolioPageTree artifacts={artifacts} sections={sections} />
             <CognitionPanel />
           </div>
@@ -664,6 +671,121 @@ function PortfolioPageTree({ artifacts, sections }: { artifacts: Artifact[]; sec
             <p className="mt-3 text-sm leading-6 text-muted">{page.purpose}</p>
           </article>
         ))}
+      </div>
+    </section>
+  );
+}
+
+function PortfolioPlanPanel({ plan, artifacts }: { plan: PortfolioStrategyPlan; artifacts: Artifact[] }) {
+  const artifactMap = new Map(artifacts.map((artifact) => [artifact.id, artifact]));
+  const readinessTone =
+    plan.readinessLabel === "Blocked"
+      ? "text-danger bg-danger/10 border-danger/25"
+      : plan.readinessLabel === "Needs Evidence"
+        ? "text-amber bg-amber/10 border-amber/25"
+        : "text-emerald bg-emerald/10 border-emerald/25";
+
+  return (
+    <section className="rounded-lg border border-line bg-surface p-5" aria-label="Portfolio strategy plan">
+      <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="text-xs uppercase tracking-[0.18em] text-primary">Portfolio plan</p>
+          <h2 className="mt-2 text-2xl font-semibold">Strategy before generation</h2>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
+            A deterministic plan for what belongs where, why it belongs there, what evidence supports it, and what blocks confident generation.
+          </p>
+        </div>
+        <div className={cn("rounded-md border px-3 py-2 text-sm font-semibold", readinessTone)}>
+          {plan.readinessScore}% · {plan.readinessLabel}
+        </div>
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-[1fr_0.8fr]">
+        <article className="rounded-md border border-line bg-panel p-4">
+          <p className="text-xs uppercase tracking-[0.16em] text-primary">{plan.archetype}</p>
+          <h3 className="mt-2 text-xl font-semibold">Homepage strategy</h3>
+          <p className="mt-2 text-sm leading-6 text-muted">{plan.homepage.positioning}</p>
+          <div className="mt-4 rounded-md border border-line bg-background p-3">
+            <p className="text-xs uppercase tracking-[0.14em] text-faint">Featured project</p>
+            <p className="mt-1 font-semibold text-ink">{plan.homepage.featuredProjectTitle}</p>
+            <p className="mt-2 text-sm leading-6 text-muted">{plan.homepage.reasoning}</p>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {plan.homepage.strongestProofIds.slice(0, 4).map((artifactId) => {
+              const artifact = artifactMap.get(artifactId);
+              return artifact ? (
+                <span key={artifactId} className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-xs text-primary">
+                  {artifact.sourceLabel}
+                </span>
+              ) : null;
+            })}
+          </div>
+        </article>
+
+        <article className="rounded-md border border-line bg-panel p-4">
+          <p className="text-xs uppercase tracking-[0.16em] text-primary">Generation blockers</p>
+          <h3 className="mt-2 text-xl font-semibold">{plan.generationBlockers.length} blockers / warnings</h3>
+          <div className="mt-4 space-y-3">
+            {plan.generationBlockers.slice(0, 4).map((blocker) => (
+              <div key={blocker.id} className="rounded-md border border-line bg-background p-3">
+                <div className="flex items-start gap-2">
+                  <ShieldAlert className={cn("mt-0.5 h-4 w-4", blocker.severity === "Blocker" ? "text-danger" : "text-amber")} aria-hidden />
+                  <div>
+                    <p className="text-sm font-semibold text-ink">{blocker.title}</p>
+                    <p className="mt-1 text-xs leading-5 text-muted">{blocker.followUpQuestion}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {!plan.generationBlockers.length ? (
+              <p className="rounded-md border border-emerald/25 bg-emerald/10 p-3 text-sm text-emerald">No generation blockers detected for draft planning.</p>
+            ) : null}
+          </div>
+        </article>
+      </div>
+
+      <div className="mt-4 grid gap-4 xl:grid-cols-3">
+        <article className="rounded-md border border-line bg-panel p-4">
+          <p className="text-xs uppercase tracking-[0.16em] text-primary">Project order</p>
+          <div className="mt-3 space-y-2">
+            {plan.projectRanking.slice(0, 4).map((project) => (
+              <div key={project.id} className="rounded-md border border-line bg-background p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <p className="text-sm font-semibold text-ink">{project.rank}. {project.title}</p>
+                  <span className="rounded-full bg-primary/10 px-2 py-1 text-xs text-primary">{project.recruiterValue}</span>
+                </div>
+                <p className="mt-2 text-xs leading-5 text-muted">{project.reasoning}</p>
+              </div>
+            ))}
+          </div>
+        </article>
+
+        <article className="rounded-md border border-line bg-panel p-4">
+          <p className="text-xs uppercase tracking-[0.16em] text-primary">Media placement</p>
+          <div className="mt-3 space-y-2">
+            {plan.mediaPlacements.slice(0, 4).map((placement) => (
+              <div key={placement.id} className="rounded-md border border-line bg-background p-3">
+                <p className="text-sm font-semibold text-ink">{placement.placement}</p>
+                <p className="mt-1 text-xs leading-5 text-muted">{placement.label}</p>
+              </div>
+            ))}
+            {!plan.mediaPlacements.length ? (
+              <p className="rounded-md border border-amber/25 bg-amber/10 p-3 text-sm text-amber">No visual candidates yet. Upload screenshots, wireframes, diagrams, or prototype images.</p>
+            ) : null}
+          </div>
+        </article>
+
+        <article className="rounded-md border border-line bg-panel p-4">
+          <p className="text-xs uppercase tracking-[0.16em] text-primary">Missing evidence</p>
+          <div className="mt-3 space-y-2">
+            {plan.missingEvidence.slice(0, 5).map((item) => (
+              <p key={item} className="rounded-md border border-line bg-background p-2 text-xs leading-5 text-muted">{item}</p>
+            ))}
+            {!plan.missingEvidence.length ? (
+              <p className="rounded-md border border-emerald/25 bg-emerald/10 p-3 text-sm text-emerald">No major missing evidence detected.</p>
+            ) : null}
+          </div>
+        </article>
       </div>
     </section>
   );
