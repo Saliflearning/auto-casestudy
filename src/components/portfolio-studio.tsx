@@ -51,7 +51,9 @@ import { cn } from "@/lib/utils";
 import { Artifact, ArtifactRelationship, CaseStudySection, Persona, PortfolioTheme, ProjectCluster, UnderstandingBacklogItem } from "@/lib/types";
 import { buildUnderstandingBacklog } from "@/lib/understanding-backlog";
 import { buildPortfolioStrategyPlan } from "@/lib/portfolio-planning-engine";
-import { PortfolioStrategyPlan } from "@/lib/portfolio-strategy-types";
+import { buildConfirmedPortfolioBlueprint } from "@/lib/portfolio-review-engine";
+import { PortfolioArchetype, PortfolioStrategyPlan } from "@/lib/portfolio-strategy-types";
+import { useBlueprintReviewStore } from "@/store/blueprint-review-store";
 import { useGaps, usePortfolioStore } from "@/store/use-portfolio-store";
 
 const personas: Persona[] = [
@@ -65,6 +67,7 @@ const personas: Persona[] = [
 ];
 
 const themes: PortfolioTheme[] = ["Instrument Dark", "Editorial Light", "Recruiter Clean"];
+const portfolioArchetypes: PortfolioArchetype[] = ["UX Research", "Product Design", "Technical UX Hybrid", "Academic Research", "Cloud/Technical", "Recruiter-Optimized"];
 const MAX_UPLOAD_FILES = 5;
 const MAX_BROWSER_FILE_BYTES = 4 * 1024 * 1024;
 const MAX_BROWSER_BATCH_BYTES = 4 * 1024 * 1024;
@@ -346,7 +349,7 @@ export function PortfolioStudio() {
       >
         <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
           <div className="space-y-6">
-            <PortfolioPlanPanel plan={portfolioPlan} artifacts={artifacts} />
+            <PortfolioReviewWorkspace plan={portfolioPlan} artifacts={artifacts} />
             <PortfolioPageTree artifacts={artifacts} sections={sections} />
             <CognitionPanel />
           </div>
@@ -786,6 +789,245 @@ function PortfolioPlanPanel({ plan, artifacts }: { plan: PortfolioStrategyPlan; 
             ) : null}
           </div>
         </article>
+      </div>
+    </section>
+  );
+}
+
+function PortfolioReviewWorkspace({ plan, artifacts }: { plan: PortfolioStrategyPlan; artifacts: Artifact[] }) {
+  const artifactMap = new Map(artifacts.map((artifact) => [artifact.id, artifact]));
+  const review = useBlueprintReviewStore();
+  const reviewState = {
+    approvedHomepage: review.approvedHomepage,
+    pinnedFeaturedProjectId: review.pinnedFeaturedProjectId,
+    projectOrder: review.projectOrder,
+    rejectedProjectIds: review.rejectedProjectIds,
+    selectedHeroProofId: review.selectedHeroProofId,
+    selectedHeroVisualId: review.selectedHeroVisualId,
+    homepageTone: review.homepageTone,
+    archetypeOverride: review.archetypeOverride,
+    mediaDecisions: review.mediaDecisions,
+    blockerDecisions: review.blockerDecisions,
+    missingEvidenceNotes: review.missingEvidenceNotes,
+    sectionNotes: review.sectionNotes,
+    updatedAt: review.updatedAt
+  };
+  const blueprint = buildConfirmedPortfolioBlueprint(plan, reviewState);
+  const projectOrder = blueprint.approvedProjectOrder.length ? blueprint.approvedProjectOrder : plan.projectRanking.map((project) => project.id);
+  const orderedProjects = projectOrder
+    .map((id) => plan.projectRanking.find((project) => project.id === id))
+    .filter(Boolean) as PortfolioStrategyPlan["projectRanking"];
+  const readinessTone =
+    blueprint.readinessLabel === "Blocked"
+      ? "text-danger bg-danger/10 border-danger/25"
+      : blueprint.readinessLabel === "Needs Evidence"
+        ? "text-amber bg-amber/10 border-amber/25"
+        : "text-emerald bg-emerald/10 border-emerald/25";
+
+  return (
+    <section className="rounded-lg border border-line bg-surface p-5" aria-label="Portfolio review workspace">
+      <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="text-xs uppercase tracking-[0.18em] text-primary">Portfolio review workspace</p>
+          <h2 className="mt-2 text-2xl font-semibold">Confirm the blueprint before generation</h2>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
+            Review inferred strategy, override assumptions, resolve blockers, and persist the decisions future generation is allowed to use.
+          </p>
+        </div>
+        <div className={cn("rounded-md border px-3 py-2 text-sm font-semibold", readinessTone)}>
+          {blueprint.readinessScore}% - {blueprint.status}
+        </div>
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-[1fr_0.8fr]">
+        <article className="rounded-md border border-line bg-panel p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-xs uppercase tracking-[0.16em] text-primary">{blueprint.archetype}</p>
+              <h3 className="mt-2 text-xl font-semibold">Homepage strategy</h3>
+            </div>
+            <button
+              type="button"
+              onClick={review.approveHomepage}
+              className={cn("min-h-9 rounded-md border px-3 text-xs font-semibold transition", blueprint.approvedHomepageStrategy.approved ? "border-emerald/25 bg-emerald/10 text-emerald" : "border-line bg-background text-muted hover:text-ink")}
+            >
+              {blueprint.approvedHomepageStrategy.approved ? "Approved" : "Approve homepage"}
+            </button>
+          </div>
+          <p className="mt-2 text-sm leading-6 text-muted">{plan.homepage.positioning}</p>
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            <Field label="Archetype">
+              <select value={review.archetypeOverride ?? plan.archetype} onChange={(event) => review.setArchetypeOverride(event.target.value as PortfolioArchetype)} className="min-h-10 w-full rounded-md border border-line bg-background px-3 text-sm">
+                {portfolioArchetypes.map((archetype) => <option key={archetype}>{archetype}</option>)}
+              </select>
+            </Field>
+            <Field label="Homepage tone">
+              <select value={review.homepageTone} onChange={(event) => review.setHomepageTone(event.target.value as typeof review.homepageTone)} className="min-h-10 w-full rounded-md border border-line bg-background px-3 text-sm">
+                {["Recruiter", "Research", "Technical", "Academic"].map((tone) => <option key={tone}>{tone}</option>)}
+              </select>
+            </Field>
+          </div>
+          <div className="mt-4 rounded-md border border-line bg-background p-3">
+            <p className="text-xs uppercase tracking-[0.14em] text-faint">Featured project</p>
+            <p className="mt-1 font-semibold text-ink">{orderedProjects[0]?.title ?? plan.homepage.featuredProjectTitle}</p>
+            <p className="mt-2 text-sm leading-6 text-muted">{plan.homepage.reasoning}</p>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {plan.homepage.strongestProofIds.slice(0, 4).map((artifactId) => {
+              const artifact = artifactMap.get(artifactId);
+              return artifact ? (
+                <button type="button" key={artifactId} onClick={() => review.selectHeroProof(artifactId)} className={cn("rounded-full border px-2.5 py-1 text-xs transition", blueprint.approvedHomepageStrategy.heroProofId === artifactId ? "border-primary/40 bg-primary/15 text-primary" : "border-line bg-background text-muted hover:text-ink")}>
+                  {artifact.sourceLabel}
+                </button>
+              ) : null;
+            })}
+          </div>
+        </article>
+
+        <article className="rounded-md border border-line bg-panel p-4">
+          <p className="text-xs uppercase tracking-[0.16em] text-primary">Blocker review</p>
+          <h3 className="mt-2 text-xl font-semibold">{blueprint.unresolvedBlockerIds.length} unresolved</h3>
+          <div className="mt-4 space-y-3">
+            {plan.generationBlockers.slice(0, 4).map((blocker) => (
+              <div key={blocker.id} className="rounded-md border border-line bg-background p-3">
+                <div className="flex items-start gap-2">
+                  <ShieldAlert className={cn("mt-0.5 h-4 w-4", blocker.severity === "Blocker" ? "text-danger" : "text-amber")} aria-hidden />
+                  <div>
+                    <p className="text-sm font-semibold text-ink">{blocker.title}</p>
+                    <p className="mt-1 text-xs leading-5 text-muted">{blocker.followUpQuestion}</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button type="button" onClick={() => review.setBlockerDecision(blocker.id, "resolved")} className="rounded-md border border-emerald/25 bg-emerald/10 px-2 py-1 text-xs text-emerald">Resolved</button>
+                      <button type="button" onClick={() => review.setBlockerDecision(blocker.id, "skipped")} className="rounded-md border border-amber/25 bg-amber/10 px-2 py-1 text-xs text-amber">Skip intentionally</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {!plan.generationBlockers.length ? (
+              <p className="rounded-md border border-emerald/25 bg-emerald/10 p-3 text-sm text-emerald">No generation blockers detected for draft planning.</p>
+            ) : null}
+          </div>
+        </article>
+      </div>
+
+      <div className="mt-4 grid gap-4 xl:grid-cols-3">
+        <article className="rounded-md border border-line bg-panel p-4">
+          <p className="text-xs uppercase tracking-[0.16em] text-primary">Project ranking</p>
+          <div className="mt-3 space-y-2">
+            {orderedProjects.slice(0, 4).map((project, index) => (
+              <div key={project.id} className="rounded-md border border-line bg-background p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <p className="text-sm font-semibold text-ink">{index + 1}. {project.title}</p>
+                  <span className="rounded-full bg-primary/10 px-2 py-1 text-xs text-primary">{project.recruiterValue}</span>
+                </div>
+                <p className="mt-2 text-xs leading-5 text-muted">{project.reasoning}</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button type="button" onClick={() => review.promoteProject(project.id, projectOrder)} className="rounded-md border border-line px-2 py-1 text-xs text-muted hover:text-ink">Promote</button>
+                  <button type="button" onClick={() => review.demoteProject(project.id, projectOrder)} className="rounded-md border border-line px-2 py-1 text-xs text-muted hover:text-ink">Demote</button>
+                  <button type="button" onClick={() => review.pinFeaturedProject(project.id)} className="rounded-md border border-primary/25 bg-primary/10 px-2 py-1 text-xs text-primary">Pin featured</button>
+                  <button type="button" onClick={() => review.rejectProject(project.id)} className="rounded-md border border-danger/25 bg-danger/10 px-2 py-1 text-xs text-danger">Remove</button>
+                </div>
+              </div>
+            ))}
+            {review.rejectedProjectIds.length ? (
+              <div className="rounded-md border border-danger/20 bg-danger/10 p-3">
+                <p className="text-xs font-semibold text-danger">Removed projects</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {review.rejectedProjectIds.map((id) => (
+                    <button key={id} type="button" onClick={() => review.restoreProject(id)} className="rounded-md border border-danger/25 px-2 py-1 text-xs text-danger">
+                      Restore {plan.projectRanking.find((project) => project.id === id)?.title ?? "project"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </article>
+
+        <article className="rounded-md border border-line bg-panel p-4">
+          <p className="text-xs uppercase tracking-[0.16em] text-primary">Media review</p>
+          <div className="mt-3 space-y-2">
+            {plan.mediaPlacements.slice(0, 4).map((placement) => (
+              <div key={placement.id} className="rounded-md border border-line bg-background p-3">
+                <p className="text-sm font-semibold text-ink">{placement.placement}</p>
+                <p className="mt-1 text-xs leading-5 text-muted">{placement.label}</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button type="button" onClick={() => review.setMediaDecision(placement.id, "approved")} className="rounded-md border border-emerald/25 bg-emerald/10 px-2 py-1 text-xs text-emerald">Approve</button>
+                  <button type="button" onClick={() => review.setMediaDecision(placement.id, "rejected")} className="rounded-md border border-danger/25 bg-danger/10 px-2 py-1 text-xs text-danger">Reject</button>
+                  <button type="button" onClick={() => review.setMediaDecision(placement.id, "private")} className="rounded-md border border-amber/25 bg-amber/10 px-2 py-1 text-xs text-amber">Private</button>
+                  <button type="button" onClick={() => review.selectHeroVisual(placement.artifactId)} className="rounded-md border border-primary/25 bg-primary/10 px-2 py-1 text-xs text-primary">Hero visual</button>
+                </div>
+              </div>
+            ))}
+            {!plan.mediaPlacements.length ? (
+              <p className="rounded-md border border-amber/25 bg-amber/10 p-3 text-sm text-amber">No visual candidates yet. Upload screenshots, wireframes, diagrams, or prototype images.</p>
+            ) : null}
+          </div>
+        </article>
+
+        <article className="rounded-md border border-line bg-panel p-4">
+          <p className="text-xs uppercase tracking-[0.16em] text-primary">Missing evidence</p>
+          <div className="mt-3 space-y-2">
+            {plan.missingEvidence.slice(0, 5).map((item) => (
+              <label key={item} className="block rounded-md border border-line bg-background p-2">
+                <span className="text-xs leading-5 text-muted">{item}</span>
+                <input value={review.missingEvidenceNotes[item] ?? ""} onChange={(event) => review.setMissingEvidenceNote(item, event.target.value)} placeholder="Add context, answer, or note" className="mt-2 min-h-9 w-full rounded-md border border-line bg-panel px-2 text-xs text-ink placeholder:text-faint" />
+              </label>
+            ))}
+            {!plan.missingEvidence.length ? (
+              <p className="rounded-md border border-emerald/25 bg-emerald/10 p-3 text-sm text-emerald">No major missing evidence detected.</p>
+            ) : null}
+          </div>
+        </article>
+      </div>
+
+      <article className="mt-4 rounded-md border border-line bg-panel p-4">
+        <p className="text-xs uppercase tracking-[0.16em] text-primary">Section notes</p>
+        <h3 className="mt-2 text-lg font-semibold">Guide the future case-study build</h3>
+        <div className="mt-3 grid gap-3 lg:grid-cols-2">
+          {plan.caseStudies.slice(0, 4).map((caseStudy) => (
+            <label key={caseStudy.projectId} className="block rounded-md border border-line bg-background p-3">
+              <span className="text-sm font-semibold text-ink">{caseStudy.title}</span>
+              <span className="mt-1 block text-xs leading-5 text-muted">
+                Add ownership, recruiter context, technical depth, or anything the agent must preserve.
+              </span>
+              <textarea
+                value={review.sectionNotes[caseStudy.projectId] ?? ""}
+                onChange={(event) => review.setSectionNote(caseStudy.projectId, event.target.value)}
+                placeholder="Example: Emphasize my research role and keep internal client names private."
+                className="mt-3 min-h-20 w-full resize-y rounded-md border border-line bg-panel p-2 text-xs leading-5 text-ink placeholder:text-faint"
+              />
+            </label>
+          ))}
+        </div>
+      </article>
+
+      <div className="mt-4 rounded-md border border-line bg-panel p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-xs uppercase tracking-[0.16em] text-primary">Confirmed blueprint</p>
+            <h3 className="mt-1 text-lg font-semibold">{blueprint.status}</h3>
+            <p className="mt-1 text-sm leading-6 text-muted">
+              Future generation must use this reviewed blueprint, excluding rejected projects, rejected/private visuals, and unresolved blockers.
+            </p>
+          </div>
+          <button type="button" onClick={review.resetReview} className="min-h-9 rounded-md border border-line px-3 text-xs font-semibold text-muted hover:text-ink">
+            Reset review
+          </button>
+        </div>
+        <div className="mt-3 grid gap-3 md:grid-cols-4">
+          {[
+            ["Projects", blueprint.approvedProjectOrder.length],
+            ["Approved visuals", blueprint.approvedVisualIds.length],
+            ["Unresolved blockers", blueprint.unresolvedBlockerIds.length],
+            ["Resolved blockers", blueprint.resolvedBlockerIds.length]
+          ].map(([label, value]) => (
+            <div key={label as string} className="rounded-md border border-line bg-background p-3">
+              <p className="text-xs uppercase tracking-[0.14em] text-faint">{label as string}</p>
+              <p className="mt-1 text-lg font-semibold text-ink">{value as number}</p>
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   );
