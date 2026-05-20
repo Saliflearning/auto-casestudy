@@ -86,7 +86,11 @@ export type BlueprintAuditEventRecord = {
     | "GENERATION_READINESS_CHECKED"
     | "GENERATION_BLOCKED"
     | "CASE_STUDY_GENERATED"
-    | "CASE_STUDY_EVALUATED";
+    | "CASE_STUDY_EVALUATED"
+    | "CASE_STUDY_REVISION_PROPOSED"
+    | "CASE_STUDY_REVISION_ACCEPTED"
+    | "CASE_STUDY_REVISION_REJECTED"
+    | "CASE_STUDY_SECTION_LOCKED";
   before?: unknown;
   after?: unknown;
   createdAt: string;

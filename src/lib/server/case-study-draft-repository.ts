@@ -122,3 +122,35 @@ export async function getLatestCaseStudyDraft(workspaceId: string) {
     .filter((draft) => draft.workspaceId === workspaceId)
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0] ?? null;
 }
+
+export async function updateCaseStudyDraft(draft: GeneratedCaseStudyDraft) {
+  return saveCaseStudyDraft({ ...draft, updatedAt: new Date().toISOString() });
+}
+
+export async function updateDraftSection(input: {
+  workspaceId: string;
+  draftId: string;
+  sectionId: string;
+  content?: string;
+  locked?: boolean;
+}) {
+  const draft = await getCaseStudyDraft(input.workspaceId, input.draftId);
+  if (!draft) return null;
+  const matched = draft.sections.some((section) => section.id === input.sectionId);
+  if (!matched) return null;
+
+  const next: GeneratedCaseStudyDraft = {
+    ...draft,
+    sections: draft.sections.map((section) =>
+      section.id === input.sectionId
+        ? {
+            ...section,
+            content: input.content ?? section.content,
+            editable: input.locked === undefined ? section.editable : !input.locked
+          }
+        : section
+    ),
+    updatedAt: new Date().toISOString()
+  };
+  return saveCaseStudyDraft(next);
+}

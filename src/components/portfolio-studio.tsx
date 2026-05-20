@@ -56,6 +56,7 @@ import { PortfolioBlueprintRecord, PortfolioBlueprintReviewState } from "@/lib/p
 import { GenerationReadinessResult } from "@/lib/generation-readiness";
 import { GeneratedCaseStudyDraft } from "@/lib/case-study-generation-types";
 import { CaseStudyQualityReport } from "@/lib/case-study-quality-types";
+import { CaseStudyRevisionRecord, RevisionGoal } from "@/lib/case-study-revision-types";
 import { PortfolioArchetype, PortfolioStrategyPlan } from "@/lib/portfolio-strategy-types";
 import { useBlueprintReviewStore } from "@/store/blueprint-review-store";
 import { useGaps, usePortfolioStore } from "@/store/use-portfolio-store";
@@ -72,6 +73,16 @@ const personas: Persona[] = [
 
 const themes: PortfolioTheme[] = ["Instrument Dark", "Editorial Light", "Recruiter Clean"];
 const portfolioArchetypes: PortfolioArchetype[] = ["UX Research", "Product Design", "Technical UX Hybrid", "Academic Research", "Cloud/Technical", "Recruiter-Optimized"];
+const revisionGoals: RevisionGoal[] = [
+  "better clarity",
+  "recruiter readability",
+  "stronger storytelling",
+  "better structure",
+  "less AI-sounding language",
+  "stronger outcomes",
+  "stronger technical depth",
+  "archetype alignment"
+];
 const MAX_UPLOAD_FILES = 5;
 const MAX_BROWSER_FILE_BYTES = 4 * 1024 * 1024;
 const MAX_BROWSER_BATCH_BYTES = 4 * 1024 * 1024;
@@ -1270,6 +1281,11 @@ function CaseStudyDraftWorkspace() {
   const [qualityReport, setQualityReport] = useState<CaseStudyQualityReport | null>(null);
   const [status, setStatus] = useState<"idle" | "loading" | "generating" | "error">("loading");
   const [qualityStatus, setQualityStatus] = useState<"idle" | "evaluating" | "error">("idle");
+  const [revision, setRevision] = useState<CaseStudyRevisionRecord | null>(null);
+  const [revisionHistory, setRevisionHistory] = useState<CaseStudyRevisionRecord[]>([]);
+  const [revisionGoal, setRevisionGoal] = useState<RevisionGoal>("better clarity");
+  const [revisionStatus, setRevisionStatus] = useState<"idle" | "revising" | "accepting" | "rejecting" | "locking" | "error">("idle");
+  const [activeRevisionSectionId, setActiveRevisionSectionId] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -1286,6 +1302,7 @@ function CaseStudyDraftWorkspace() {
           setStatus("idle");
           if (payload.draft) {
             void loadQualityReport();
+            void loadRevisionHistory(payload.draft.id);
           }
         }
       } catch {
@@ -1314,6 +1331,8 @@ function CaseStudyDraftWorkspace() {
       }
       setDraft(payload.draft);
       setQualityReport(null);
+      setRevision(null);
+      setRevisionHistory([]);
       setStatus("idle");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Case study generation is blocked.");
@@ -1332,6 +1351,20 @@ function CaseStudyDraftWorkspace() {
       setQualityReport(payload.report ?? null);
     } catch {
       // Quality reports are optional until the user evaluates the draft.
+    }
+  }
+
+  async function loadRevisionHistory(draftId: string) {
+    try {
+      const response = await fetch(`/api/generation/revision-history/${draftId}`, {
+        cache: "no-store",
+        headers: { "x-autocasestudy-workspace": getClientWorkspaceId() }
+      });
+      if (!response.ok) return;
+      const payload = await response.json();
+      setRevisionHistory(payload.revisions ?? []);
+    } catch {
+      // Revision history is optional until a section revision exists.
     }
   }
 
@@ -1367,6 +1400,107 @@ function CaseStudyDraftWorkspace() {
     );
   }
 
+  async function proposeRevision(sectionId: string, goal = revisionGoal) {
+    if (!draft) return;
+    const section = draft.sections.find((item) => item.id === sectionId);
+    if (!section) return;
+    setRevisionStatus("revising");
+    setActiveRevisionSectionId(sectionId);
+    setError("");
+    try {
+      const response = await fetch("/api/generation/revise-section", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-autocasestudy-workspace": getClientWorkspaceId() },
+        body: JSON.stringify({ draftId: draft.id, sectionId, goal, currentContent: section.content })
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload?.error?.message ?? "Could not create a section revision.");
+      setRevision(payload.revision);
+      if (payload.revision?.originalContent && payload.revision.originalContent !== section.content) {
+        setDraft((current) =>
+          current
+            ? {
+                ...current,
+                sections: current.sections.map((item) => (item.id === sectionId ? { ...item, content: payload.revision.originalContent } : item)),
+                updatedAt: new Date().toISOString()
+              }
+            : current
+        );
+      }
+      await loadRevisionHistory(draft.id);
+      setRevisionStatus("idle");
+      setActiveRevisionSectionId("");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not create a section revision.");
+      setRevisionStatus("error");
+      setActiveRevisionSectionId("");
+    }
+  }
+
+  async function acceptRevision() {
+    if (!revision || !draft) return;
+    setRevisionStatus("accepting");
+    setError("");
+    try {
+      const response = await fetch("/api/generation/accept-revision", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-autocasestudy-workspace": getClientWorkspaceId() },
+        body: JSON.stringify({ revisionId: revision.id })
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload?.error?.message ?? "Could not accept this revision.");
+      setRevision(payload.revision);
+      setDraft(payload.draft);
+      setQualityReport(payload.report);
+      await loadRevisionHistory(draft.id);
+      setRevisionStatus("idle");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not accept this revision.");
+      setRevisionStatus("error");
+    }
+  }
+
+  async function rejectRevision() {
+    if (!revision || !draft) return;
+    setRevisionStatus("rejecting");
+    setError("");
+    try {
+      const response = await fetch("/api/generation/reject-revision", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-autocasestudy-workspace": getClientWorkspaceId() },
+        body: JSON.stringify({ revisionId: revision.id })
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload?.error?.message ?? "Could not reject this revision.");
+      setRevision(payload.revision);
+      await loadRevisionHistory(draft.id);
+      setRevisionStatus("idle");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not reject this revision.");
+      setRevisionStatus("error");
+    }
+  }
+
+  async function toggleSectionLock(sectionId: string, locked: boolean) {
+    if (!draft) return;
+    setRevisionStatus("locking");
+    setError("");
+    try {
+      const response = await fetch("/api/generation/lock-section", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-autocasestudy-workspace": getClientWorkspaceId() },
+        body: JSON.stringify({ draftId: draft.id, sectionId, locked })
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload?.error?.message ?? "Could not update the section lock.");
+      setDraft(payload.draft);
+      setRevisionStatus("idle");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not update the section lock.");
+      setRevisionStatus("error");
+    }
+  }
+
   return (
     <section className="mb-6 rounded-lg border border-line bg-surface p-5" aria-label="Case study draft workspace">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -1395,6 +1529,23 @@ function CaseStudyDraftWorkspace() {
           <div className="space-y-3">
             <CaseStudyQualityPanel report={qualityReport} onEvaluate={evaluateDraft} isEvaluating={qualityStatus === "evaluating"} />
             <div className="rounded-md border border-line bg-panel p-4">
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.16em] text-primary">Revision goal</p>
+                  <p className="mt-1 text-sm leading-6 text-muted">Revise one section at a time using the current evidence and quality report.</p>
+                </div>
+                <select
+                  value={revisionGoal}
+                  onChange={(event) => setRevisionGoal(event.target.value as RevisionGoal)}
+                  className="min-h-10 rounded-md border border-line bg-background px-3 text-sm text-ink"
+                >
+                  {revisionGoals.map((goal) => (
+                    <option key={goal} value={goal}>{goal}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="rounded-md border border-line bg-panel p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <p className="text-xs uppercase tracking-[0.16em] text-primary">{draft.archetype}</p>
@@ -1408,21 +1559,45 @@ function CaseStudyDraftWorkspace() {
             </div>
 
             {draft.sections.map((section) => (
-              <article key={section.id} className="rounded-md border border-line bg-panel p-4">
+              <article key={section.id} className={cn("rounded-md border bg-panel p-4", section.editable ? "border-line" : "border-amber/35")}>
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <p className="text-xs uppercase tracking-[0.14em] text-faint">{section.type}</p>
                     <h4 className="mt-1 font-semibold text-ink">{section.title}</h4>
                   </div>
-                  <span className={cn("rounded-full px-2 py-1 text-xs", section.confidence === "confirmed" ? "bg-emerald/15 text-emerald" : section.confidence === "inferred" ? "bg-primary/10 text-primary" : "bg-amber/15 text-amber")}>
-                    {section.confidence}
-                  </span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className={cn("rounded-full px-2 py-1 text-xs", section.confidence === "confirmed" ? "bg-emerald/15 text-emerald" : section.confidence === "inferred" ? "bg-primary/10 text-primary" : "bg-amber/15 text-amber")}>
+                      {section.confidence}
+                    </span>
+                    {!section.editable ? <span className="rounded-full bg-amber/15 px-2 py-1 text-xs text-amber">Locked</span> : null}
+                  </div>
                 </div>
                 <textarea
                   value={section.content}
                   onChange={(event) => updateSection(section.id, event.target.value)}
-                  className="mt-3 min-h-28 w-full resize-y rounded-md border border-line bg-background p-3 text-sm leading-6 text-ink"
+                  disabled={!section.editable}
+                  className="mt-3 min-h-28 w-full resize-y rounded-md border border-line bg-background p-3 text-sm leading-6 text-ink disabled:cursor-not-allowed disabled:opacity-70"
                 />
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => proposeRevision(section.id)}
+                    disabled={!section.editable || revisionStatus === "revising"}
+                    className="inline-flex min-h-8 items-center gap-2 rounded-md border border-primary/30 bg-primary/15 px-3 text-xs font-semibold text-primary hover:bg-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <Sparkles className="h-3.5 w-3.5" aria-hidden />
+                    {revisionStatus === "revising" && activeRevisionSectionId === section.id ? "Revising..." : "Revise section"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => toggleSectionLock(section.id, section.editable)}
+                    disabled={revisionStatus === "locking"}
+                    className="inline-flex min-h-8 items-center gap-2 rounded-md border border-line bg-background px-3 text-xs font-semibold text-muted hover:text-ink disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {section.editable ? <Lock className="h-3.5 w-3.5" aria-hidden /> : <LockOpen className="h-3.5 w-3.5" aria-hidden />}
+                    {section.editable ? "Lock section" : "Unlock section"}
+                  </button>
+                </div>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {section.provenance.slice(0, 4).map((source) => (
                     <span key={`${section.id}-${source.artifactId ?? source.label}`} className="rounded-full border border-line bg-background px-2 py-1 text-xs text-muted">
@@ -1440,6 +1615,14 @@ function CaseStudyDraftWorkspace() {
           </div>
 
           <aside className="space-y-4">
+            <RevisionWorkspacePanel
+              revision={revision}
+              history={revisionHistory}
+              status={revisionStatus}
+              onAccept={acceptRevision}
+              onReject={rejectRevision}
+              onRegenerate={(sectionId) => proposeRevision(sectionId, revisionGoal)}
+            />
             <div className="rounded-md border border-line bg-panel p-4">
               <p className="text-xs uppercase tracking-[0.16em] text-primary">Unresolved issues</p>
               <div className="mt-3 space-y-2">
@@ -1466,6 +1649,143 @@ function CaseStudyDraftWorkspace() {
           No case study draft yet. Save a confirmed blueprint, pass the readiness gate, then generate one constrained project story.
         </div>
       )}
+    </section>
+  );
+}
+
+function RevisionWorkspacePanel({
+  revision,
+  history,
+  status,
+  onAccept,
+  onReject,
+  onRegenerate
+}: {
+  revision: CaseStudyRevisionRecord | null;
+  history: CaseStudyRevisionRecord[];
+  status: "idle" | "revising" | "accepting" | "rejecting" | "locking" | "error";
+  onAccept: () => void;
+  onReject: () => void;
+  onRegenerate: (sectionId: string) => void;
+}) {
+  const busy = status !== "idle";
+
+  return (
+    <section className="rounded-md border border-line bg-panel p-4" aria-label="Revision workspace">
+      <p className="text-xs uppercase tracking-[0.16em] text-primary">Revision workspace</p>
+      <h3 className="mt-1 text-lg font-semibold text-ink">{revision ? "Review proposed change" : "No active revision"}</h3>
+      <p className="mt-1 text-sm leading-6 text-muted">
+        Accept only section-level improvements that preserve evidence and keep missing proof visible.
+      </p>
+
+      {revision ? (
+        <div className="mt-4 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="rounded-full border border-line bg-background px-2 py-1 text-xs text-muted">{revision.goal}</span>
+            <span
+              className={cn(
+                "rounded-full px-2 py-1 text-xs font-semibold",
+                revision.status === "Accepted"
+                  ? "bg-emerald/15 text-emerald"
+                  : revision.status === "Rejected"
+                    ? "bg-danger/10 text-danger"
+                    : "bg-primary/10 text-primary"
+              )}
+            >
+              {revision.status}
+            </span>
+          </div>
+          <div className="grid gap-2">
+            <div className="rounded-md border border-line bg-background p-3">
+              <p className="text-xs uppercase tracking-[0.12em] text-faint">Before</p>
+              <p className="mt-2 text-xs leading-5 text-muted">{revision.originalContent}</p>
+            </div>
+            <div className="rounded-md border border-primary/25 bg-primary/10 p-3">
+              <p className="text-xs uppercase tracking-[0.12em] text-primary">After</p>
+              <p className="mt-2 text-xs leading-5 text-ink">{revision.revisedContent}</p>
+            </div>
+          </div>
+          <div className="rounded-md border border-line bg-background p-3">
+            <p className="text-xs uppercase tracking-[0.12em] text-faint">Quality delta</p>
+            <p className={cn("mt-1 text-lg font-semibold", revision.qualityDelta.delta >= 0 ? "text-emerald" : "text-danger")}>
+              {revision.qualityDelta.beforeScore}% {"->"} {revision.qualityDelta.afterScore}% ({revision.qualityDelta.delta >= 0 ? "+" : ""}
+              {revision.qualityDelta.delta})
+            </p>
+            <p className="mt-1 text-xs leading-5 text-muted">{revision.qualityDelta.rationale}</p>
+          </div>
+          <div className="rounded-md border border-line bg-background p-3">
+            <p className="text-xs uppercase tracking-[0.12em] text-faint">What changed</p>
+            <ul className="mt-2 space-y-1 text-xs leading-5 text-muted">
+              {revision.changeSummary.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {revision.provenance.slice(0, 4).map((source) => (
+              <span key={`${revision.id}-${source.artifactId ?? source.label}`} className="rounded-full border border-line bg-background px-2 py-1 text-xs text-muted">
+                {source.label}
+              </span>
+            ))}
+          </div>
+          {revision.unsupportedWarnings.length ? (
+            <div className="rounded-md border border-amber/25 bg-amber/10 p-3 text-xs leading-5 text-amber">
+              {revision.unsupportedWarnings.join(" ")}
+            </div>
+          ) : null}
+          <div className="grid gap-2">
+            <button
+              type="button"
+              onClick={onAccept}
+              disabled={revision.status !== "Proposed" || busy}
+              className="min-h-9 rounded-md bg-primary px-3 text-xs font-semibold text-primary-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {status === "accepting" ? "Accepting..." : "Accept revision"}
+            </button>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={onReject}
+                disabled={revision.status !== "Proposed" || busy}
+                className="min-h-9 rounded-md border border-line bg-background px-3 text-xs font-semibold text-muted hover:text-ink disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {status === "rejecting" ? "Rejecting..." : "Reject"}
+              </button>
+              <button
+                type="button"
+                onClick={() => onRegenerate(revision.sectionId)}
+                disabled={busy}
+                className="min-h-9 rounded-md border border-line bg-background px-3 text-xs font-semibold text-muted hover:text-ink disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {status === "revising" ? "Regenerating..." : "Regenerate"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="mt-4 rounded-md border border-line bg-background p-3 text-sm leading-6 text-muted">
+          Choose a revision goal, then use &quot;Revise section&quot; on one draft section. The system will show a controlled before/after change instead of rewriting the whole case study.
+        </div>
+      )}
+
+      <div className="mt-4 border-t border-line pt-4">
+        <p className="text-xs uppercase tracking-[0.12em] text-faint">Revision history</p>
+        <div className="mt-2 space-y-2">
+          {history.length ? (
+            history.slice(0, 5).map((item) => (
+              <div
+                key={item.id}
+                className="rounded-md border border-line bg-background p-2 text-xs leading-5 text-muted"
+              >
+                <span className="block font-semibold text-ink">{item.status} - {item.goal}</span>
+                <span>Section: {item.sectionId}</span>
+              </div>
+            ))
+          ) : (
+            <p className="rounded-md border border-line bg-background p-2 text-xs text-muted">No section revisions recorded yet.</p>
+          )}
+        </div>
+      </div>
     </section>
   );
 }
