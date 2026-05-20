@@ -46,3 +46,43 @@ export type ConfirmedPortfolioBlueprint = {
   readinessLabel: PortfolioStrategyPlan["readinessLabel"];
   generatedFromPlanAt: string;
 };
+
+export type PortfolioBlueprintRecord = {
+  id: string;
+  workspaceId: string;
+  userId: string;
+  version: number;
+  status: ConfirmedPortfolioBlueprint["status"];
+  archetype: ConfirmedPortfolioBlueprint["archetype"];
+  readinessScore: number;
+  blueprint: ConfirmedPortfolioBlueprint;
+  reviewState: PortfolioBlueprintReviewState;
+  provenanceRefs: ProvenanceReference[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type PortfolioBlueprintRevisionRecord = {
+  id: string;
+  blueprintId: string;
+  workspaceId: string;
+  version: number;
+  snapshot: ConfirmedPortfolioBlueprint;
+  reviewState: PortfolioBlueprintReviewState;
+  changeSummary: string;
+  createdAt: string;
+  createdBy?: string;
+};
+
+export type BlueprintAuditEventRecord = {
+  id: string;
+  workspaceId: string;
+  blueprintId: string;
+  revisionId?: string;
+  actorId?: string;
+  action: "BLUEPRINT_SAVED" | "BLUEPRINT_ROLLED_BACK";
+  before?: unknown;
+  after?: unknown;
+  createdAt: string;
+  source: "portfolio-review-workspace" | "api";
+};

@@ -52,6 +52,7 @@ import { Artifact, ArtifactRelationship, CaseStudySection, Persona, PortfolioThe
 import { buildUnderstandingBacklog } from "@/lib/understanding-backlog";
 import { buildPortfolioStrategyPlan } from "@/lib/portfolio-planning-engine";
 import { buildConfirmedPortfolioBlueprint } from "@/lib/portfolio-review-engine";
+import { PortfolioBlueprintRecord, PortfolioBlueprintReviewState } from "@/lib/portfolio-blueprint-types";
 import { PortfolioArchetype, PortfolioStrategyPlan } from "@/lib/portfolio-strategy-types";
 import { useBlueprintReviewStore } from "@/store/blueprint-review-store";
 import { useGaps, usePortfolioStore } from "@/store/use-portfolio-store";
@@ -797,7 +798,12 @@ function PortfolioPlanPanel({ plan, artifacts }: { plan: PortfolioStrategyPlan; 
 function PortfolioReviewWorkspace({ plan, artifacts }: { plan: PortfolioStrategyPlan; artifacts: Artifact[] }) {
   const artifactMap = new Map(artifacts.map((artifact) => [artifact.id, artifact]));
   const review = useBlueprintReviewStore();
-  const reviewState = {
+  const hydrateReview = review.hydrateReview;
+  const [persistedBlueprint, setPersistedBlueprint] = useState<PortfolioBlueprintRecord | null>(null);
+  const [revisionCount, setRevisionCount] = useState(0);
+  const [saveState, setSaveState] = useState<"idle" | "loading" | "saving" | "saved" | "error">("loading");
+  const [persistenceError, setPersistenceError] = useState("");
+  const reviewState: PortfolioBlueprintReviewState = {
     approvedHomepage: review.approvedHomepage,
     pinnedFeaturedProjectId: review.pinnedFeaturedProjectId,
     projectOrder: review.projectOrder,
@@ -813,6 +819,8 @@ function PortfolioReviewWorkspace({ plan, artifacts }: { plan: PortfolioStrategy
     updatedAt: review.updatedAt
   };
   const blueprint = buildConfirmedPortfolioBlueprint(plan, reviewState);
+  const lastSavedAt = persistedBlueprint?.updatedAt;
+  const hasUnsavedChanges = Boolean(review.updatedAt && (!lastSavedAt || new Date(review.updatedAt).getTime() > new Date(lastSavedAt).getTime()));
   const projectOrder = blueprint.approvedProjectOrder.length ? blueprint.approvedProjectOrder : plan.projectRanking.map((project) => project.id);
   const orderedProjects = projectOrder
     .map((id) => plan.projectRanking.find((project) => project.id === id))
@@ -822,7 +830,88 @@ function PortfolioReviewWorkspace({ plan, artifacts }: { plan: PortfolioStrategy
       ? "text-danger bg-danger/10 border-danger/25"
       : blueprint.readinessLabel === "Needs Evidence"
         ? "text-amber bg-amber/10 border-amber/25"
-        : "text-emerald bg-emerald/10 border-emerald/25";
+      : "text-emerald bg-emerald/10 border-emerald/25";
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadBlueprint() {
+      setSaveState("loading");
+      try {
+        const response = await fetch("/api/portfolio-blueprint", { cache: "no-store" });
+        if (!response.ok) throw new Error("Could not load saved blueprint.");
+        const payload = (await response.json()) as { blueprint: PortfolioBlueprintRecord | null; revisionCount: number };
+        if (cancelled) return;
+        setPersistedBlueprint(payload.blueprint);
+        setRevisionCount(payload.revisionCount ?? 0);
+        if (payload.blueprint?.reviewState) {
+          hydrateReview(payload.blueprint.reviewState);
+        }
+        setSaveState("idle");
+      } catch (error) {
+        if (cancelled) return;
+        setPersistenceError(error instanceof Error ? error.message : "Could not load saved blueprint.");
+        setSaveState("error");
+      }
+    }
+
+    loadBlueprint();
+    return () => {
+      cancelled = true;
+    };
+  }, [hydrateReview]);
+
+  async function saveBlueprint() {
+    setSaveState("saving");
+    setPersistenceError("");
+    try {
+      const response = await fetch("/api/portfolio-blueprint", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          blueprint,
+          reviewState,
+          changeSummary: "Saved confirmed portfolio blueprint review decisions."
+        })
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload?.error?.message ?? "Could not save blueprint.");
+      setPersistedBlueprint(payload.blueprint);
+      setRevisionCount(payload.revisionCount ?? revisionCount + 1);
+      setSaveState("saved");
+    } catch (error) {
+      setPersistenceError(error instanceof Error ? error.message : "Could not save blueprint.");
+      setSaveState("error");
+    }
+  }
+
+  async function rollbackPreviousRevision() {
+    setSaveState("saving");
+    setPersistenceError("");
+    try {
+      const revisionsResponse = await fetch("/api/portfolio-blueprint/revisions", { cache: "no-store" });
+      const revisionsPayload = await revisionsResponse.json();
+      if (!revisionsResponse.ok) throw new Error(revisionsPayload?.error?.message ?? "Could not load revisions.");
+      const previous = revisionsPayload.revisions?.[1];
+      if (!previous) throw new Error("No previous blueprint revision is available.");
+      const rollbackResponse = await fetch("/api/portfolio-blueprint/revisions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ version: previous.version })
+      });
+      const rollbackPayload = await rollbackResponse.json();
+      if (!rollbackResponse.ok) throw new Error(rollbackPayload?.error?.message ?? "Could not roll back blueprint.");
+      setPersistedBlueprint(rollbackPayload.blueprint);
+      setRevisionCount(rollbackPayload.revisionCount ?? revisionCount + 1);
+      if (rollbackPayload.blueprint?.reviewState) {
+        hydrateReview(rollbackPayload.blueprint.reviewState);
+      }
+      setSaveState("saved");
+    } catch (error) {
+      setPersistenceError(error instanceof Error ? error.message : "Could not roll back blueprint.");
+      setSaveState("error");
+    }
+  }
 
   return (
     <section className="rounded-lg border border-line bg-surface p-5" aria-label="Portfolio review workspace">
@@ -834,10 +923,45 @@ function PortfolioReviewWorkspace({ plan, artifacts }: { plan: PortfolioStrategy
             Review inferred strategy, override assumptions, resolve blockers, and persist the decisions future generation is allowed to use.
           </p>
         </div>
-        <div className={cn("rounded-md border px-3 py-2 text-sm font-semibold", readinessTone)}>
-          {blueprint.readinessScore}% - {blueprint.status}
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <div className={cn("rounded-md border px-3 py-2 text-sm font-semibold", readinessTone)}>
+            {blueprint.readinessScore}% - {blueprint.status}
+          </div>
+          <button
+            type="button"
+            onClick={saveBlueprint}
+            disabled={saveState === "saving" || saveState === "loading"}
+            className="min-h-10 rounded-md border border-primary/30 bg-primary/15 px-3 text-sm font-semibold text-primary transition hover:bg-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {saveState === "saving" ? "Saving..." : "Save blueprint"}
+          </button>
         </div>
       </div>
+
+      <div className="mb-4 grid gap-3 md:grid-cols-4">
+        <div className="rounded-md border border-line bg-panel p-3">
+          <p className="text-xs uppercase tracking-[0.14em] text-faint">Persistence</p>
+          <p className="mt-1 text-sm font-semibold text-ink">
+            {saveState === "loading" ? "Loading" : hasUnsavedChanges ? "Unsaved changes" : persistedBlueprint ? "Saved" : "Not saved yet"}
+          </p>
+        </div>
+        <div className="rounded-md border border-line bg-panel p-3">
+          <p className="text-xs uppercase tracking-[0.14em] text-faint">Version</p>
+          <p className="mt-1 text-sm font-semibold text-ink">v{persistedBlueprint?.version ?? 0}</p>
+        </div>
+        <div className="rounded-md border border-line bg-panel p-3">
+          <p className="text-xs uppercase tracking-[0.14em] text-faint">Revisions</p>
+          <p className="mt-1 text-sm font-semibold text-ink">{revisionCount}</p>
+        </div>
+        <div className="rounded-md border border-line bg-panel p-3">
+          <p className="text-xs uppercase tracking-[0.14em] text-faint">Last saved</p>
+          <p className="mt-1 text-sm font-semibold text-ink">{lastSavedAt ? new Date(lastSavedAt).toLocaleString() : "Never"}</p>
+        </div>
+      </div>
+
+      {persistenceError ? (
+        <p className="mb-4 rounded-md border border-danger/25 bg-danger/10 p-3 text-sm text-danger">{persistenceError}</p>
+      ) : null}
 
       <div className="grid gap-4 xl:grid-cols-[1fr_0.8fr]">
         <article className="rounded-md border border-line bg-panel p-4">
@@ -1011,9 +1135,14 @@ function PortfolioReviewWorkspace({ plan, artifacts }: { plan: PortfolioStrategy
               Future generation must use this reviewed blueprint, excluding rejected projects, rejected/private visuals, and unresolved blockers.
             </p>
           </div>
-          <button type="button" onClick={review.resetReview} className="min-h-9 rounded-md border border-line px-3 text-xs font-semibold text-muted hover:text-ink">
-            Reset review
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={rollbackPreviousRevision} disabled={revisionCount < 2 || saveState === "saving"} className="min-h-9 rounded-md border border-line px-3 text-xs font-semibold text-muted hover:text-ink disabled:cursor-not-allowed disabled:opacity-50">
+              Restore previous
+            </button>
+            <button type="button" onClick={review.resetReview} className="min-h-9 rounded-md border border-line px-3 text-xs font-semibold text-muted hover:text-ink">
+              Reset review
+            </button>
+          </div>
         </div>
         <div className="mt-3 grid gap-3 md:grid-cols-4">
           {[

@@ -17,6 +17,7 @@ const initialReview: PortfolioBlueprintReviewState = {
 };
 
 type BlueprintReviewStore = PortfolioBlueprintReviewState & {
+  hydrateReview: (review: PortfolioBlueprintReviewState) => void;
   approveHomepage: () => void;
   setHomepageTone: (tone: PortfolioBlueprintReviewState["homepageTone"]) => void;
   setArchetypeOverride: (archetype?: PortfolioArchetype) => void;
@@ -48,6 +49,7 @@ export const useBlueprintReviewStore = create<BlueprintReviewStore>()(
   persist(
     (set) => ({
       ...initialReview,
+      hydrateReview: (review) => set({ ...initialReview, ...review }),
       approveHomepage: () => set({ approvedHomepage: true, updatedAt: new Date().toISOString() }),
       setHomepageTone: (homepageTone) => set({ homepageTone, updatedAt: new Date().toISOString() }),
       setArchetypeOverride: (archetypeOverride) => set({ archetypeOverride, updatedAt: new Date().toISOString() }),

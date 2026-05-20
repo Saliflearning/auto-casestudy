@@ -118,6 +118,9 @@ model Workspace {
   parserJobs  ParserJob[]
   auditLogs   AuditLog[]
   clusters    ProjectCluster[]
+  portfolioBlueprint PortfolioBlueprint?
+  portfolioBlueprintRevisions PortfolioBlueprintRevision[]
+  blueprintAuditEvents BlueprintAuditEvent[]
 }
 
 model WorkspaceMember {
@@ -266,6 +269,65 @@ model AuditLog {
 
   @@index([workspaceId, createdAt])
   @@index([entityType, entityId])
+}
+
+model PortfolioBlueprint {
+  id                 String   @id
+  workspaceId        String   @unique
+  userId             String
+  version            Int
+  status             String
+  archetype          String
+  readinessScore     Int
+  blueprintJson      Json
+  reviewStateJson    Json
+  provenanceRefsJson Json
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  workspace          Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  revisions          PortfolioBlueprintRevision[]
+  auditEvents        BlueprintAuditEvent[]
+
+  @@index([userId])
+  @@index([status])
+}
+
+model PortfolioBlueprintRevision {
+  id              String   @id
+  blueprintId     String
+  workspaceId     String
+  version         Int
+  snapshotJson    Json
+  reviewStateJson Json
+  changeSummary   String
+  createdBy       String?
+  createdAt       DateTime @default(now())
+  blueprint       PortfolioBlueprint @relation(fields: [blueprintId], references: [id], onDelete: Cascade)
+  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  auditEvents     BlueprintAuditEvent[]
+
+  @@unique([blueprintId, version])
+  @@index([workspaceId, version])
+}
+
+model BlueprintAuditEvent {
+  id          String   @id
+  workspaceId String
+  blueprintId String
+  revisionId  String?
+  actorId     String?
+  action      String
+  beforeJson  Json?
+  afterJson   Json?
+  source      String
+  createdAt   DateTime @default(now())
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  blueprint   PortfolioBlueprint @relation(fields: [blueprintId], references: [id], onDelete: Cascade)
+  revision    PortfolioBlueprintRevision? @relation(fields: [revisionId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, createdAt])
+  @@index([blueprintId, createdAt])
+  @@index([action])
 }
 
 model PortfolioReference {
