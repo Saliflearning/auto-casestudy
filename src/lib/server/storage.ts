@@ -28,14 +28,10 @@ export async function storeArtifactFile(file: File, id: string, bytes: Buffer): 
   const storageKey = `artifacts/${id}/${safeName(file.name)}`;
 
   if (process.env.BLOB_READ_WRITE_TOKEN) {
-    if (process.env.AUTOCASESTUDY_ALLOW_PUBLIC_ARTIFACT_URLS !== "true") {
-      throw new StorageConfigurationError(
-        "Production artifact storage is fail-closed: configure private object storage or explicitly allow public demo artifact URLs."
-      );
-    }
+    const access = process.env.AUTOCASESTUDY_ALLOW_PUBLIC_ARTIFACT_URLS === "true" ? "public" : "private";
 
     const blob = await put(storageKey, bytes, {
-      access: "public",
+      access,
       contentType: file.type || "application/octet-stream",
       token: process.env.BLOB_READ_WRITE_TOKEN
     });
@@ -43,7 +39,7 @@ export async function storeArtifactFile(file: File, id: string, bytes: Buffer): 
     return {
       storageUrl: blob.url,
       storageKey: blob.pathname,
-      storageVisibility: "public-demo"
+      storageVisibility: access === "public" ? "public-demo" : "private"
     };
   }
 
