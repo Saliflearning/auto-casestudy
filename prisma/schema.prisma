@@ -313,7 +313,7 @@ model PortfolioBlueprintRevision {
 model BlueprintAuditEvent {
   id          String   @id
   workspaceId String
-  blueprintId String
+  blueprintId String?
   revisionId  String?
   actorId     String?
   action      String
@@ -322,7 +322,7 @@ model BlueprintAuditEvent {
   source      String
   createdAt   DateTime @default(now())
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  blueprint   PortfolioBlueprint @relation(fields: [blueprintId], references: [id], onDelete: Cascade)
+  blueprint   PortfolioBlueprint? @relation(fields: [blueprintId], references: [id], onDelete: Cascade)
   revision    PortfolioBlueprintRevision? @relation(fields: [revisionId], references: [id], onDelete: SetNull)
 
   @@index([workspaceId, createdAt])

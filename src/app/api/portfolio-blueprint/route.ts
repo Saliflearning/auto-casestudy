@@ -6,7 +6,8 @@ import {
   listPortfolioBlueprintRevisions,
   savePortfolioBlueprint
 } from "@/lib/server/portfolio-blueprint-repository";
-import { getWorkspaceId, workspaceCookieHeader } from "@/lib/server/workspace";
+import { requireWorkspaceSession } from "@/lib/server/workspace";
+import { ensureWorkspaceMembership } from "@/lib/server/workspace-repository";
 
 export const runtime = "nodejs";
 
@@ -64,11 +65,12 @@ function validateBlueprint(value: unknown): ConfirmedPortfolioBlueprint | null {
 }
 
 export async function GET(request: NextRequest) {
-  const workspaceId = getWorkspaceId(request);
+  const { session, setCookieHeaders } = requireWorkspaceSession(request);
+  await ensureWorkspaceMembership(session);
   const [blueprint, revisions, auditEvents] = await Promise.all([
-    getLatestPortfolioBlueprint(workspaceId),
-    listPortfolioBlueprintRevisions(workspaceId),
-    listBlueprintAuditEvents(workspaceId)
+    getLatestPortfolioBlueprint(session.workspaceId),
+    listPortfolioBlueprintRevisions(session.workspaceId),
+    listBlueprintAuditEvents(session.workspaceId)
   ]);
   const response = NextResponse.json({
     blueprint,
@@ -76,12 +78,13 @@ export async function GET(request: NextRequest) {
     latestRevision: revisions[0] ?? null,
     auditEventCount: auditEvents.length
   });
-  response.headers.append("Set-Cookie", workspaceCookieHeader(workspaceId));
+  setCookieHeaders.forEach((cookie) => response.headers.append("Set-Cookie", cookie));
   return response;
 }
 
 export async function PUT(request: NextRequest) {
-  const workspaceId = getWorkspaceId(request);
+  const { session, setCookieHeaders } = requireWorkspaceSession(request);
+  await ensureWorkspaceMembership(session);
   let body: unknown;
 
   try {
@@ -102,14 +105,13 @@ export async function PUT(request: NextRequest) {
     return apiError("VALIDATION_ERROR", "A valid confirmed blueprint and review state are required.", 422);
   }
 
-  const userId = workspaceId;
-  const saved = await savePortfolioBlueprint({ workspaceId, userId, blueprint, reviewState, changeSummary });
-  const revisions = await listPortfolioBlueprintRevisions(workspaceId);
+  const saved = await savePortfolioBlueprint({ workspaceId: session.workspaceId, userId: session.userId, blueprint, reviewState, changeSummary });
+  const revisions = await listPortfolioBlueprintRevisions(session.workspaceId);
   const response = NextResponse.json({
     blueprint: saved.blueprint,
     revision: saved.revision,
     revisionCount: revisions.length
   });
-  response.headers.append("Set-Cookie", workspaceCookieHeader(workspaceId));
+  setCookieHeaders.forEach((cookie) => response.headers.append("Set-Cookie", cookie));
   return response;
 }

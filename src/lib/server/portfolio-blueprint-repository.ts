@@ -90,7 +90,7 @@ function toAuditRecord(record: any): BlueprintAuditEventRecord {
   return {
     id: record.id,
     workspaceId: record.workspaceId,
-    blueprintId: record.blueprintId,
+    blueprintId: record.blueprintId ?? undefined,
     revisionId: record.revisionId ?? undefined,
     actorId: record.actorId ?? undefined,
     action: record.action,
@@ -305,4 +305,50 @@ export async function rollbackPortfolioBlueprint(input: { workspaceId: string; u
   }
 
   return saved;
+}
+
+export async function recordBlueprintAuditEvent(input: {
+  workspaceId: string;
+  blueprintId?: string;
+  revisionId?: string;
+  actorId?: string;
+  action: BlueprintAuditEventRecord["action"];
+  before?: unknown;
+  after?: unknown;
+  source?: BlueprintAuditEventRecord["source"];
+}) {
+  const event: BlueprintAuditEventRecord = {
+    id: `blueprint_audit_${randomUUID()}`,
+    workspaceId: input.workspaceId,
+    blueprintId: input.blueprintId,
+    revisionId: input.revisionId,
+    actorId: input.actorId,
+    action: input.action,
+    before: input.before === undefined ? null : jsonSafe(input.before),
+    after: input.after === undefined ? null : jsonSafe(input.after),
+    createdAt: new Date().toISOString(),
+    source: input.source ?? "api"
+  };
+
+  if (shouldUseDatabase()) {
+    await ensureWorkspace(input.workspaceId);
+    await (prisma() as any).blueprintAuditEvent.create({
+      data: {
+        id: event.id,
+        workspaceId: event.workspaceId,
+        blueprintId: event.blueprintId,
+        revisionId: event.revisionId,
+        actorId: event.actorId,
+        action: event.action,
+        beforeJson: event.before,
+        afterJson: event.after,
+        source: event.source
+      }
+    });
+    return event;
+  }
+
+  const events = await readJson<BlueprintAuditEventRecord[]>(auditPath, []);
+  await writeJson(auditPath, [event, ...events]);
+  return event;
 }

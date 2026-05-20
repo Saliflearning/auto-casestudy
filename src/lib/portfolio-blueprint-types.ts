@@ -77,10 +77,10 @@ export type PortfolioBlueprintRevisionRecord = {
 export type BlueprintAuditEventRecord = {
   id: string;
   workspaceId: string;
-  blueprintId: string;
+  blueprintId?: string;
   revisionId?: string;
   actorId?: string;
-  action: "BLUEPRINT_SAVED" | "BLUEPRINT_ROLLED_BACK";
+  action: "BLUEPRINT_SAVED" | "BLUEPRINT_ROLLED_BACK" | "GENERATION_READINESS_CHECKED" | "GENERATION_BLOCKED";
   before?: unknown;
   after?: unknown;
   createdAt: string;

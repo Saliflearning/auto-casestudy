@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { listPortfolioBlueprintRevisions, rollbackPortfolioBlueprint } from "@/lib/server/portfolio-blueprint-repository";
-import { getWorkspaceId, workspaceCookieHeader } from "@/lib/server/workspace";
+import { requireWorkspaceSession } from "@/lib/server/workspace";
+import { ensureWorkspaceMembership } from "@/lib/server/workspace-repository";
 
 export const runtime = "nodejs";
 
@@ -9,15 +10,17 @@ function apiError(code: string, message: string, status: number) {
 }
 
 export async function GET(request: NextRequest) {
-  const workspaceId = getWorkspaceId(request);
-  const revisions = await listPortfolioBlueprintRevisions(workspaceId);
+  const { session, setCookieHeaders } = requireWorkspaceSession(request);
+  await ensureWorkspaceMembership(session);
+  const revisions = await listPortfolioBlueprintRevisions(session.workspaceId);
   const response = NextResponse.json({ revisions });
-  response.headers.append("Set-Cookie", workspaceCookieHeader(workspaceId));
+  setCookieHeaders.forEach((cookie) => response.headers.append("Set-Cookie", cookie));
   return response;
 }
 
 export async function POST(request: NextRequest) {
-  const workspaceId = getWorkspaceId(request);
+  const { session, setCookieHeaders } = requireWorkspaceSession(request);
+  await ensureWorkspaceMembership(session);
   let body: unknown;
 
   try {
@@ -31,13 +34,13 @@ export async function POST(request: NextRequest) {
     return apiError("VALIDATION_ERROR", "A valid revision version is required.", 422);
   }
 
-  const rolledBack = await rollbackPortfolioBlueprint({ workspaceId, userId: workspaceId, version });
+  const rolledBack = await rollbackPortfolioBlueprint({ workspaceId: session.workspaceId, userId: session.userId, version });
   if (!rolledBack) {
     return apiError("NOT_FOUND", "Blueprint revision was not found for this workspace.", 404);
   }
 
-  const revisions = await listPortfolioBlueprintRevisions(workspaceId);
+  const revisions = await listPortfolioBlueprintRevisions(session.workspaceId);
   const response = NextResponse.json({ blueprint: rolledBack.blueprint, revision: rolledBack.revision, revisionCount: revisions.length });
-  response.headers.append("Set-Cookie", workspaceCookieHeader(workspaceId));
+  setCookieHeaders.forEach((cookie) => response.headers.append("Set-Cookie", cookie));
   return response;
 }

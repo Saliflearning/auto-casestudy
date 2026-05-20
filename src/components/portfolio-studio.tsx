@@ -46,13 +46,14 @@ import {
   UserRoundCheck,
   WandSparkles
 } from "lucide-react";
-import { ChangeEvent, DragEvent, FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, DragEvent, FormEvent, ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Artifact, ArtifactRelationship, CaseStudySection, Persona, PortfolioTheme, ProjectCluster, UnderstandingBacklogItem } from "@/lib/types";
 import { buildUnderstandingBacklog } from "@/lib/understanding-backlog";
 import { buildPortfolioStrategyPlan } from "@/lib/portfolio-planning-engine";
 import { buildConfirmedPortfolioBlueprint } from "@/lib/portfolio-review-engine";
 import { PortfolioBlueprintRecord, PortfolioBlueprintReviewState } from "@/lib/portfolio-blueprint-types";
+import { GenerationReadinessResult } from "@/lib/generation-readiness";
 import { PortfolioArchetype, PortfolioStrategyPlan } from "@/lib/portfolio-strategy-types";
 import { useBlueprintReviewStore } from "@/store/blueprint-review-store";
 import { useGaps, usePortfolioStore } from "@/store/use-portfolio-store";
@@ -84,6 +85,14 @@ const workflow = [
 ] as const;
 
 type StudioView = (typeof workflow)[number]["id"];
+
+type WorkspaceSummary = {
+  workspace: { id: string; name: string };
+  user: { id: string };
+  membership: { role: string };
+  authMode: string;
+  productionAuthRequired: boolean;
+};
 
 function getClientWorkspaceId() {
   if (typeof window === "undefined") return "demo-workspace";
@@ -207,6 +216,7 @@ export function PortfolioStudio() {
   const [uploadError, setUploadError] = useState("");
   const [uploadSuccess, setUploadSuccess] = useState("");
   const [activeView, setActiveView] = useState<StudioView>("ingest");
+  const [workspaceSummary, setWorkspaceSummary] = useState<WorkspaceSummary | null>(null);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
@@ -233,6 +243,18 @@ export function PortfolioStudio() {
   useEffect(() => {
     let cancelled = false;
     const workspaceId = getClientWorkspaceId();
+    fetch("/api/workspaces/current", {
+      headers: { "x-autocasestudy-workspace": workspaceId }
+    })
+      .then((response) => response.json())
+      .then((payload) => {
+        if (!cancelled && payload.workspace) {
+          setWorkspaceSummary(payload as WorkspaceSummary);
+        }
+      })
+      .catch(() => {
+        // Workspace session establishment is retried through protected API calls.
+      });
     fetch("/api/artifacts", {
       headers: { "x-autocasestudy-workspace": workspaceId }
     })
@@ -418,7 +440,7 @@ export function PortfolioStudio() {
       <div className="grid min-h-dvh lg:grid-cols-[272px_1fr]">
         <Sidebar activeView={activeView} onView={setActiveView} />
         <section id="workspace" className="min-w-0 overflow-x-hidden">
-          <TopBar persona={persona} activeLabel={activeWorkflowItem.label} onReset={resetDemo} />
+          <TopBar persona={persona} activeLabel={activeWorkflowItem.label} workspaceSummary={workspaceSummary} onReset={resetDemo} />
           <div className="mx-auto flex w-full max-w-[1480px] flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
             <MobileViewTabs activeView={activeView} onView={setActiveView} />
             {workspaceView[activeView]}
@@ -468,10 +490,12 @@ function Sidebar({ activeView, onView }: { activeView: StudioView; onView: (view
 function TopBar({
   persona,
   activeLabel,
+  workspaceSummary,
   onReset
 }: {
   persona: Persona;
   activeLabel: string;
+  workspaceSummary: WorkspaceSummary | null;
   onReset: () => void;
 }) {
   return (
@@ -482,6 +506,9 @@ function TopBar({
           <h1 className="text-xl font-semibold tracking-tight">{activeLabel}</h1>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <span className="inline-flex min-h-11 items-center rounded-md border border-emerald/25 bg-emerald/10 px-3 text-xs font-semibold text-emerald">
+            {workspaceSummary ? `${workspaceSummary.membership.role} workspace` : "Securing workspace"}
+          </span>
           <span className="inline-flex min-h-11 items-center rounded-md border border-line bg-panel px-3 text-sm text-muted">
             {persona}
           </span>
@@ -803,6 +830,8 @@ function PortfolioReviewWorkspace({ plan, artifacts }: { plan: PortfolioStrategy
   const [revisionCount, setRevisionCount] = useState(0);
   const [saveState, setSaveState] = useState<"idle" | "loading" | "saving" | "saved" | "error">("loading");
   const [persistenceError, setPersistenceError] = useState("");
+  const [generationReadiness, setGenerationReadiness] = useState<GenerationReadinessResult | null>(null);
+  const [readinessState, setReadinessState] = useState<"idle" | "checking" | "error">("idle");
   const reviewState: PortfolioBlueprintReviewState = {
     approvedHomepage: review.approvedHomepage,
     pinnedFeaturedProjectId: review.pinnedFeaturedProjectId,
@@ -832,13 +861,32 @@ function PortfolioReviewWorkspace({ plan, artifacts }: { plan: PortfolioStrategy
         ? "text-amber bg-amber/10 border-amber/25"
       : "text-emerald bg-emerald/10 border-emerald/25";
 
+  const checkGenerationReadiness = useCallback(async () => {
+    setReadinessState("checking");
+    try {
+      const response = await fetch("/api/generation/readiness", {
+        cache: "no-store",
+        headers: { "x-autocasestudy-workspace": getClientWorkspaceId() }
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload?.error?.message ?? "Could not validate generation readiness.");
+      setGenerationReadiness(payload.readiness);
+      setReadinessState("idle");
+    } catch {
+      setReadinessState("error");
+    }
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
 
     async function loadBlueprint() {
       setSaveState("loading");
       try {
-        const response = await fetch("/api/portfolio-blueprint", { cache: "no-store" });
+        const response = await fetch("/api/portfolio-blueprint", {
+          cache: "no-store",
+          headers: { "x-autocasestudy-workspace": getClientWorkspaceId() }
+        });
         if (!response.ok) throw new Error("Could not load saved blueprint.");
         const payload = (await response.json()) as { blueprint: PortfolioBlueprintRecord | null; revisionCount: number };
         if (cancelled) return;
@@ -848,6 +896,7 @@ function PortfolioReviewWorkspace({ plan, artifacts }: { plan: PortfolioStrategy
           hydrateReview(payload.blueprint.reviewState);
         }
         setSaveState("idle");
+        void checkGenerationReadiness();
       } catch (error) {
         if (cancelled) return;
         setPersistenceError(error instanceof Error ? error.message : "Could not load saved blueprint.");
@@ -859,7 +908,7 @@ function PortfolioReviewWorkspace({ plan, artifacts }: { plan: PortfolioStrategy
     return () => {
       cancelled = true;
     };
-  }, [hydrateReview]);
+  }, [checkGenerationReadiness, hydrateReview]);
 
   async function saveBlueprint() {
     setSaveState("saving");
@@ -867,7 +916,7 @@ function PortfolioReviewWorkspace({ plan, artifacts }: { plan: PortfolioStrategy
     try {
       const response = await fetch("/api/portfolio-blueprint", {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-autocasestudy-workspace": getClientWorkspaceId() },
         body: JSON.stringify({
           blueprint,
           reviewState,
@@ -879,6 +928,7 @@ function PortfolioReviewWorkspace({ plan, artifacts }: { plan: PortfolioStrategy
       setPersistedBlueprint(payload.blueprint);
       setRevisionCount(payload.revisionCount ?? revisionCount + 1);
       setSaveState("saved");
+      await checkGenerationReadiness();
     } catch (error) {
       setPersistenceError(error instanceof Error ? error.message : "Could not save blueprint.");
       setSaveState("error");
@@ -889,24 +939,28 @@ function PortfolioReviewWorkspace({ plan, artifacts }: { plan: PortfolioStrategy
     setSaveState("saving");
     setPersistenceError("");
     try {
-      const revisionsResponse = await fetch("/api/portfolio-blueprint/revisions", { cache: "no-store" });
+      const revisionsResponse = await fetch("/api/portfolio-blueprint/revisions", {
+        cache: "no-store",
+        headers: { "x-autocasestudy-workspace": getClientWorkspaceId() }
+      });
       const revisionsPayload = await revisionsResponse.json();
       if (!revisionsResponse.ok) throw new Error(revisionsPayload?.error?.message ?? "Could not load revisions.");
       const previous = revisionsPayload.revisions?.[1];
       if (!previous) throw new Error("No previous blueprint revision is available.");
       const rollbackResponse = await fetch("/api/portfolio-blueprint/revisions", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-autocasestudy-workspace": getClientWorkspaceId() },
         body: JSON.stringify({ version: previous.version })
       });
       const rollbackPayload = await rollbackResponse.json();
       if (!rollbackResponse.ok) throw new Error(rollbackPayload?.error?.message ?? "Could not roll back blueprint.");
-      setPersistedBlueprint(rollbackPayload.blueprint);
+        setPersistedBlueprint(rollbackPayload.blueprint);
       setRevisionCount(rollbackPayload.revisionCount ?? revisionCount + 1);
       if (rollbackPayload.blueprint?.reviewState) {
         hydrateReview(rollbackPayload.blueprint.reviewState);
       }
       setSaveState("saved");
+      await checkGenerationReadiness();
     } catch (error) {
       setPersistenceError(error instanceof Error ? error.message : "Could not roll back blueprint.");
       setSaveState("error");
@@ -962,6 +1016,52 @@ function PortfolioReviewWorkspace({ plan, artifacts }: { plan: PortfolioStrategy
       {persistenceError ? (
         <p className="mb-4 rounded-md border border-danger/25 bg-danger/10 p-3 text-sm text-danger">{persistenceError}</p>
       ) : null}
+
+      <div className="mb-4 rounded-md border border-line bg-panel p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-xs uppercase tracking-[0.16em] text-primary">Generation readiness gate</p>
+            <h3 className="mt-2 text-lg font-semibold">
+              {generationReadiness ? generationReadiness.state.replaceAll("-", " ") : readinessState === "checking" ? "checking persisted blueprint" : "waiting for validation"}
+            </h3>
+            <p className="mt-1 text-sm leading-6 text-muted">
+              The future generator can only read the saved blueprint, approved evidence, approved visuals, and resolved blocker state.
+            </p>
+          </div>
+          <button type="button" onClick={checkGenerationReadiness} className="min-h-9 rounded-md border border-line px-3 text-xs font-semibold text-muted hover:text-ink">
+            Recheck gate
+          </button>
+        </div>
+        <div className="mt-3 grid gap-3 md:grid-cols-4">
+          <div className="rounded-md border border-line bg-background p-3">
+            <p className="text-xs uppercase tracking-[0.14em] text-faint">Allowed</p>
+            <p className={cn("mt-1 text-sm font-semibold", generationReadiness?.canGenerate ? "text-emerald" : "text-danger")}>
+              {generationReadiness?.canGenerate ? "Yes" : "No"}
+            </p>
+          </div>
+          <div className="rounded-md border border-line bg-background p-3">
+            <p className="text-xs uppercase tracking-[0.14em] text-faint">Blockers</p>
+            <p className="mt-1 text-sm font-semibold text-ink">{generationReadiness?.blockerCount ?? 0}</p>
+          </div>
+          <div className="rounded-md border border-line bg-background p-3">
+            <p className="text-xs uppercase tracking-[0.14em] text-faint">Warnings</p>
+            <p className="mt-1 text-sm font-semibold text-ink">{generationReadiness?.warningCount ?? 0}</p>
+          </div>
+          <div className="rounded-md border border-line bg-background p-3">
+            <p className="text-xs uppercase tracking-[0.14em] text-faint">Blueprint source</p>
+            <p className="mt-1 text-sm font-semibold text-ink">v{generationReadiness?.blueprintVersion ?? 0}</p>
+          </div>
+        </div>
+        {generationReadiness?.issues.length ? (
+          <div className="mt-3 grid gap-2 md:grid-cols-2">
+            {generationReadiness.issues.slice(0, 4).map((item) => (
+              <p key={item.id} className={cn("rounded-md border p-3 text-xs leading-5", item.severity === "blocker" ? "border-danger/25 bg-danger/10 text-danger" : "border-amber/25 bg-amber/10 text-amber")}>
+                {item.message}
+              </p>
+            ))}
+          </div>
+        ) : null}
+      </div>
 
       <div className="grid gap-4 xl:grid-cols-[1fr_0.8fr]">
         <article className="rounded-md border border-line bg-panel p-4">
