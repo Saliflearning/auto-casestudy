@@ -217,7 +217,7 @@ export function generateConstrainedCaseStudy(input: {
 
   const now = new Date().toISOString();
   return {
-    id: `case_study_draft_${projectId}_${blueprint.version}`,
+    id: `case_study_draft_${projectId}_${blueprint.id}_${blueprint.version}`,
     workspaceId: input.workspaceId,
     blueprintId: blueprint.id,
     blueprintVersion: blueprint.version,
