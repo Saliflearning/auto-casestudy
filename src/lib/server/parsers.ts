@@ -35,7 +35,7 @@ function ext(name: string) {
 }
 
 async function parsePdf(bytes: Buffer) {
-  const pdfParse = (await import("pdf-parse")).default;
+  const pdfParse = (await import("pdf-parse/lib/pdf-parse.js")).default;
   const result = await pdfParse(bytes);
   return cleanText(result.text);
 }
