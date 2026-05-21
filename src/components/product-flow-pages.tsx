@@ -70,7 +70,13 @@ function usePortfolioSiteDraft(): LoadState<PortfolioSiteDraft> {
         if (!cancelled) setState({ data: payload.draft ?? null, loading: false, error: "" });
       })
       .catch(() => {
-        if (!cancelled) setState({ data: null, loading: false, error: "Could not load the saved portfolio site draft." });
+        if (!cancelled) {
+          setState({
+            data: null,
+            loading: false,
+            error: "No saved portfolio site draft is available yet. Create one in Builder after Strategy has a confirmed blueprint."
+          });
+        }
       });
     return () => {
       cancelled = true;
@@ -237,7 +243,7 @@ export function ProjectsWorkspacePage() {
                 </div>
                 <p className="mt-4 text-sm leading-6 text-muted">{project.sectionBlocks.filter((section) => section.visible).length} visible sections</p>
                 <p className="mt-2 text-sm leading-6 text-muted">{project.provenance.length} provenance references attached</p>
-                <Link href="/studio#editor" className="mt-5 inline-flex min-h-10 items-center gap-2 rounded-md border border-line px-3 text-sm font-semibold text-ink transition hover:bg-panelHigh">
+                <Link href="/builder" className="mt-5 inline-flex min-h-10 items-center gap-2 rounded-md border border-line px-3 text-sm font-semibold text-ink transition hover:bg-panelHigh">
                   Edit project page <ArrowRight className="h-4 w-4" aria-hidden />
                 </Link>
               </article>
@@ -247,7 +253,7 @@ export function ProjectsWorkspacePage() {
           <MissingState
             title="No saved project pages yet"
             detail={error || `${artifacts.length} artifacts are available in the workspace, but the project library waits for a saved portfolio site draft.`}
-            actionHref="/studio#editor"
+            actionHref="/builder"
             actionLabel="Create site draft in Builder"
           />
         )}

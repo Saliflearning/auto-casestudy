@@ -19,7 +19,7 @@ export function PortfolioDraftPreview({
   error,
   emptyTitle = "Create a site draft first",
   emptyDetail = "The preview only renders saved portfolio drafts from the builder. Create or reset a draft from the approved plan before previewing.",
-  actionHref = "/studio#editor",
+  actionHref = "/builder",
   actionLabel = "Open Builder"
 }: PortfolioDraftPreviewProps) {
   if (isLoading) {

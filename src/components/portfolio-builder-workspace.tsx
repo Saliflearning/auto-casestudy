@@ -38,8 +38,9 @@ export function PortfolioBuilderWorkspace() {
         setSaveState("idle");
       } catch {
         if (!cancelled) {
-          setError("Could not load portfolio builder draft.");
-          setSaveState("error");
+          setDraft(null);
+          setError("");
+          setSaveState("idle");
         }
       }
     }
@@ -242,7 +243,7 @@ export function PortfolioBuilderWorkspace() {
         <div className="mt-5 rounded-md border border-line bg-panel p-5">
           <p className="text-sm font-semibold text-ink">No builder draft yet</p>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
-            Reset from the persisted orchestration plan after layout composition and portfolio orchestration are complete.
+            Create one from the persisted orchestration plan after Strategy has a confirmed blueprint, layout composition, and portfolio orchestration.
           </p>
         </div>
       )}

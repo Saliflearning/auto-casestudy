@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Bot, Upload } from "lucide-react";
 import { useEffect, useState } from "react";
-import { internalProductRoutes, productRoutes } from "@/lib/product-flow";
+import { productRoutes } from "@/lib/product-flow";
 import { cn } from "@/lib/utils";
 
 export function SiteNav() {
@@ -25,8 +25,6 @@ export function SiteNav() {
     return hash === `#${itemHash}`;
   }
 
-  const navItems = pathname === "/references" ? [...productRoutes, ...internalProductRoutes] : productRoutes;
-
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-background/90 px-4 py-3 backdrop-blur sm:px-6 lg:px-8">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3">
@@ -41,7 +39,7 @@ export function SiteNav() {
         </Link>
 
         <nav className="flex flex-1 flex-wrap justify-start gap-1 sm:justify-center" aria-label="Primary">
-          {navItems.map((item) => {
+          {productRoutes.map((item) => {
             const active = isActive(item.href);
             return (
               <Link

@@ -47,7 +47,7 @@ Primary nav now appears on:
 - `/preview`
 - `/templates`
 - `/publish`
-- `/references` with the internal Reference Lab item included
+- `/references` without adding Reference Lab to the primary nav
 
 Primary nav items:
 
@@ -97,6 +97,11 @@ Studio also keeps secondary workflow navigation:
    - Middleware now protects workspace pages and `/api/*` when `AUTOCASESTUDY_STUDIO_PASSWORD` is configured.
    - This keeps Builder/Preview/Publish from becoming public windows into private workspace state.
 
+6. Follow-up from first live click-through notes
+   - Removed Reference Lab from the primary nav even on `/references`.
+   - Recovery actions now point to the dedicated `/builder` route.
+   - Missing draft states no longer show a scary generic load failure when the useful action is to create a draft.
+
 ## Click Action Matrix
 
 | Page | Button/link label | Current behavior | Expected behavior | Status | Fix applied |
@@ -114,8 +119,8 @@ Studio also keeps secondary workflow navigation:
 | Profile | Save profile context | Saves profile context to local MVP storage | Save profile state | Working | Verified |
 | Profile | Upload evidence | Routes to `/studio#ingest` | Continue to Inbox | Working | Existing |
 | Profile | Audience mode buttons | Updates portfolio audience mode | Change strategy lens | Working | Verified |
-| Projects | Edit project page | Routes to `/studio#editor` | Edit project in Studio | Working | Existing |
-| Projects | Create site draft in Builder | Routes to `/studio#editor` when empty | Clear next action | Working | Existing |
+| Projects | Edit project page | Routes to `/builder` | Edit project in Builder | Working | Updated |
+| Projects | Create site draft in Builder | Routes to `/builder` when empty | Clear next action | Working | Updated |
 | Templates | Use in Strategy | Routes to `/studio#strategy` | Choose strategy before composition | Working | Existing |
 | Studio | Sidebar workflow items | Switch hash-addressable Studio views | Navigate workflow | Working | Existing from 023.6 |
 | Studio | Reset demo | Resets local demo store | Reset demo workspace | Working | Existing |
@@ -132,12 +137,13 @@ Studio also keeps secondary workflow navigation:
 | Builder | Save draft | Calls save API | Persist draft changes | Working | Existing |
 | Builder | Section controls | Move, hide, lock, needs revision | Edit saved draft structure | Working | Existing |
 | Builder | Media controls | Toggle visibility/private state | Edit approved media placement | Working | Existing |
-| Preview | Open Builder | Routes to `/studio#editor` when empty | Recovery action | Working | Existing |
+| Preview | Open Builder | Routes to `/builder` when empty | Recovery action | Working | Updated |
 | Publish | Resolve blockers first | Disabled when blocked | Prevent fake publish | Disabled | Existing |
 | Publish | Publish setup coming soon | Disabled when otherwise ready | Avoid fake publish action | Coming soon | Disabled with reason |
 | References | Queue reference | Saves reference or server queues it | Internal reference intake | Working | Existing |
 | References | Probe structure | Calls capture/probe API unless local-only | Internal admin probe | Working/disabled | Existing |
 | References | Capture screenshots | Calls screenshot capture unless local-only | Internal admin capture | Working/disabled | Existing |
+| References | Reference Lab nav item | Removed from primary nav | Keep internal lab accessible but not primary | Fixed | Removed from `SiteNav` |
 
 ## User-Flow QA Results
 
@@ -155,6 +161,8 @@ Studio also keeps secondary workflow navigation:
 - Added real `/builder` route.
 - Converted fake editor actions into disabled coming-soon controls.
 - Converted fake publish setup action into disabled coming-soon control.
+- Removed Reference Lab from the primary product nav.
+- Reworded missing draft states to give a clear next action instead of a system-looking load failure.
 - Added explicit button type to form submit and regenerate controls.
 
 ## Buttons Intentionally Disabled
