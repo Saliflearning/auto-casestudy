@@ -92,7 +92,9 @@ export type BlueprintAuditEventRecord = {
     | "CASE_STUDY_REVISION_REJECTED"
     | "CASE_STUDY_SECTION_LOCKED"
     | "LAYOUT_COMPOSITION_CREATED"
-    | "LAYOUT_REGION_REGENERATED";
+    | "LAYOUT_REGION_REGENERATED"
+    | "PORTFOLIO_EXPERIENCE_ORCHESTRATED"
+    | "PORTFOLIO_PROJECTS_RESEQUENCED";
   before?: unknown;
   after?: unknown;
   createdAt: string;

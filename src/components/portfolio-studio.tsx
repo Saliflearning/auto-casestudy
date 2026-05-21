@@ -58,6 +58,7 @@ import { GeneratedCaseStudyDraft } from "@/lib/case-study-generation-types";
 import { CaseStudyQualityReport } from "@/lib/case-study-quality-types";
 import { CaseStudyRevisionRecord, RevisionGoal } from "@/lib/case-study-revision-types";
 import { PortfolioPageComposition } from "@/lib/layout-composition-types";
+import { PortfolioExperiencePlan } from "@/lib/portfolio-experience-types";
 import { PortfolioArchetype, PortfolioStrategyPlan } from "@/lib/portfolio-strategy-types";
 import { useBlueprintReviewStore } from "@/store/blueprint-review-store";
 import { useGaps, usePortfolioStore } from "@/store/use-portfolio-store";
@@ -387,6 +388,7 @@ export function PortfolioStudio() {
         <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
           <div className="space-y-6">
             <PortfolioReviewWorkspace plan={portfolioPlan} artifacts={artifacts} />
+            <PortfolioExperienceWorkspace />
             <PortfolioPageTree artifacts={artifacts} sections={sections} />
             <CognitionPanel />
           </div>
@@ -1273,6 +1275,228 @@ function PortfolioReviewWorkspace({ plan, artifacts }: { plan: PortfolioStrategy
           ))}
         </div>
       </div>
+    </section>
+  );
+}
+
+function PortfolioExperienceWorkspace() {
+  const [plan, setPlan] = useState<PortfolioExperiencePlan | null>(null);
+  const [status, setStatus] = useState<"idle" | "loading" | "orchestrating" | "reordering" | "error">("loading");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadPlan() {
+      try {
+        const response = await fetch("/api/portfolio/experience/latest", {
+          cache: "no-store",
+          headers: { "x-autocasestudy-workspace": getClientWorkspaceId() }
+        });
+        if (!response.ok) {
+          if (!cancelled) setStatus("idle");
+          return;
+        }
+        const payload = await response.json();
+        if (!cancelled) {
+          setPlan(payload.plan ?? null);
+          setStatus("idle");
+        }
+      } catch {
+        if (!cancelled) setStatus("idle");
+      }
+    }
+    loadPlan();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function orchestrateExperience() {
+    setStatus("orchestrating");
+    setError("");
+    try {
+      const response = await fetch("/api/portfolio/orchestrate", {
+        method: "POST",
+        headers: { "x-autocasestudy-workspace": getClientWorkspaceId() }
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload?.error?.message ?? "Could not orchestrate the portfolio experience.");
+      setPlan(payload.plan);
+      setStatus("idle");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not orchestrate the portfolio experience.");
+      setStatus("error");
+    }
+  }
+
+  async function moveProject(projectId: string, direction: "up" | "down") {
+    if (!plan) return;
+    const ids = plan.projectSequence.map((project) => project.projectId);
+    const index = ids.indexOf(projectId);
+    const target = direction === "up" ? index - 1 : index + 1;
+    if (index < 0 || target < 0 || target >= ids.length) return;
+    const next = [...ids];
+    [next[index], next[target]] = [next[target], next[index]];
+    setStatus("reordering");
+    setError("");
+    try {
+      const response = await fetch("/api/portfolio/resequence-projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-autocasestudy-workspace": getClientWorkspaceId() },
+        body: JSON.stringify({ planId: plan.id, projectIds: next })
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload?.error?.message ?? "Could not update project sequence.");
+      setPlan(payload.plan);
+      setStatus("idle");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not update project sequence.");
+      setStatus("error");
+    }
+  }
+
+  return (
+    <section className="rounded-lg border border-line bg-surface p-5" aria-label="Portfolio experience orchestration">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="text-xs uppercase tracking-[0.18em] text-primary">Portfolio experience</p>
+          <h2 className="mt-2 text-2xl font-semibold">Orchestrate the whole portfolio</h2>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
+            Coordinates homepage, project order, navigation, rhythm, and recruiter flow from persisted blueprint and composed pages.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={orchestrateExperience}
+          disabled={status === "orchestrating" || status === "loading"}
+          className="inline-flex min-h-10 items-center gap-2 rounded-md border border-primary/30 bg-primary/15 px-3 text-sm font-semibold text-primary transition hover:bg-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          <Network className="h-4 w-4" aria-hidden />
+          {status === "orchestrating" ? "Orchestrating..." : plan ? "Refresh experience" : "Orchestrate portfolio"}
+        </button>
+      </div>
+
+      {error ? <p className="mt-4 rounded-md border border-danger/25 bg-danger/10 p-3 text-sm text-danger">{error}</p> : null}
+
+      {plan ? (
+        <div className="mt-5 grid gap-4 xl:grid-cols-[1fr_320px]">
+          <div className="space-y-4">
+            <div className="rounded-md border border-line bg-panel p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.16em] text-primary">Homepage orchestration</p>
+                  <h3 className="mt-1 text-xl font-semibold text-ink">{plan.homepage.headline}</h3>
+                  <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">{plan.homepage.subheadline}</p>
+                </div>
+                <span className={cn("rounded-full px-2.5 py-1 text-xs font-semibold", plan.status === "Ready for Assembly" ? "bg-emerald/15 text-emerald" : "bg-amber/15 text-amber")}>
+                  {plan.status}
+                </span>
+              </div>
+              <div className="mt-4 grid gap-3 md:grid-cols-3">
+                {plan.homepage.credibilityHierarchy.slice(0, 3).map((item) => (
+                  <div key={item} className="rounded-md border border-line bg-background p-3">
+                    <p className="text-xs uppercase tracking-[0.12em] text-faint">Proof layer</p>
+                    <p className="mt-1 text-sm font-semibold text-ink">{item}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-[1fr_0.85fr]">
+              <div className="rounded-md border border-line bg-panel p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.16em] text-primary">Project sequence</p>
+                    <h3 className="mt-1 text-lg font-semibold">Recruiter-first order</h3>
+                  </div>
+                  <span className="rounded-full border border-line bg-background px-2.5 py-1 text-xs text-muted">{plan.projectSequence.length} projects</span>
+                </div>
+                <div className="mt-4 space-y-2">
+                  {plan.projectSequence.length ? plan.projectSequence.map((project, index) => (
+                    <article key={project.projectId} className="rounded-md border border-line bg-background p-3">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-ink">{project.order}. {project.title}</p>
+                          <p className="mt-1 text-xs leading-5 text-muted">{project.rationale}</p>
+                        </div>
+                        <span className={cn("rounded-full px-2 py-1 text-xs font-semibold", project.recruiterValue === "high" ? "bg-emerald/15 text-emerald" : project.recruiterValue === "medium" ? "bg-primary/10 text-primary" : "bg-amber/15 text-amber")}>
+                          {project.recruiterValue}
+                        </span>
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <button type="button" onClick={() => moveProject(project.projectId, "up")} disabled={index === 0 || status === "reordering"} className="rounded-md border border-line px-2 py-1 text-xs text-muted hover:text-ink disabled:cursor-not-allowed disabled:opacity-40">
+                          Move up
+                        </button>
+                        <button type="button" onClick={() => moveProject(project.projectId, "down")} disabled={index === plan.projectSequence.length - 1 || status === "reordering"} className="rounded-md border border-line px-2 py-1 text-xs text-muted hover:text-ink disabled:cursor-not-allowed disabled:opacity-40">
+                          Move down
+                        </button>
+                        <span className="rounded-md border border-line bg-panel px-2 py-1 text-xs text-muted">{project.rhythmRole}</span>
+                      </div>
+                    </article>
+                  )) : (
+                    <p className="rounded-md border border-amber/25 bg-amber/10 p-3 text-sm text-amber">Compose at least one case study page before final portfolio sequencing.</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-md border border-line bg-panel p-4">
+                <p className="text-xs uppercase tracking-[0.16em] text-primary">Recruiter journey</p>
+                <div className="mt-4 space-y-2">
+                  {plan.recruiterJourney.map((step, index) => (
+                    <div key={step.id} className="rounded-md border border-line bg-background p-3">
+                      <p className="text-xs uppercase tracking-[0.12em] text-faint">Step {index + 1} - {step.targetPage}</p>
+                      <p className="mt-1 text-sm font-semibold text-ink">{step.label}</p>
+                      <p className="mt-1 text-xs leading-5 text-muted">{step.portfolioAnswer}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <aside className="space-y-4">
+            <div className="rounded-md border border-line bg-panel p-4">
+              <p className="text-xs uppercase tracking-[0.16em] text-primary">Navigation</p>
+              <div className="mt-3 space-y-2">
+                {plan.navigation.map((item) => (
+                  <div key={item.id} className="flex items-center justify-between gap-3 rounded-md border border-line bg-background p-2">
+                    <span className="text-sm font-semibold text-ink">{item.label}</span>
+                    <span className="text-xs text-muted">{item.priority}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="rounded-md border border-line bg-panel p-4">
+              <p className="text-xs uppercase tracking-[0.16em] text-primary">Visual rhythm</p>
+              <p className="mt-1 text-2xl font-semibold text-ink">{plan.visualRhythm.score}%</p>
+              <p className="mt-2 text-sm leading-6 text-muted">{plan.visualRhythm.mediaPacing}</p>
+            </div>
+            <div className="rounded-md border border-line bg-panel p-4">
+              <p className="text-xs uppercase tracking-[0.16em] text-primary">Archetype cohesion</p>
+              <div className="mt-3 space-y-2">
+                {plan.archetypeStrategy.map((note) => (
+                  <p key={note} className="text-xs leading-5 text-muted">{note}</p>
+                ))}
+              </div>
+            </div>
+            {plan.unresolvedWarnings.length ? (
+              <div className="rounded-md border border-amber/25 bg-amber/10 p-4">
+                <p className="text-xs uppercase tracking-[0.16em] text-amber">Experience warnings</p>
+                <p className="mt-2 text-sm leading-6 text-amber">{plan.unresolvedWarnings.slice(0, 2).join(" ")}</p>
+              </div>
+            ) : null}
+          </aside>
+        </div>
+      ) : (
+        <div className="mt-5 grid gap-3 md:grid-cols-4">
+          {["Homepage narrative", "Project sequence", "Recruiter journey", "Navigation"].map((item) => (
+            <div key={item} className="rounded-md border border-line bg-panel p-4">
+              <p className="text-sm font-semibold text-ink">{item}</p>
+              <p className="mt-2 text-xs leading-5 text-muted">Created from the saved blueprint and composed page layouts.</p>
+            </div>
+          ))}
+        </div>
+      )}
     </section>
   );
 }

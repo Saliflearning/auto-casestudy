@@ -117,3 +117,19 @@ export async function getLatestPortfolioPageComposition(workspaceId: string, dra
     .filter((composition) => composition.workspaceId === workspaceId && (!draftId || composition.draftId === draftId))
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0] ?? null;
 }
+
+export async function listPortfolioPageCompositions(workspaceId: string) {
+  if (shouldUseDatabase()) {
+    const records = await (prisma() as any).portfolioPageComposition.findMany({
+      where: { workspaceId },
+      orderBy: { createdAt: "desc" },
+      take: 25
+    });
+    return records.map(toComposition);
+  }
+
+  const compositions = await readLocalCompositions();
+  return compositions
+    .filter((composition) => composition.workspaceId === workspaceId)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
