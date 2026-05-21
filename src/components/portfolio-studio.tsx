@@ -18,15 +18,11 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
-  Accessibility,
   ArrowRight,
   BadgeCheck,
   Bot,
   BrainCircuit,
-  BriefcaseBusiness,
   CheckCircle2,
-  ClipboardList,
-  Cloud,
   Download,
   FileText,
   GripVertical,
@@ -43,17 +39,18 @@ import {
   ShieldAlert,
   Sparkles,
   Upload,
-  UserRoundCheck,
   WandSparkles
 } from "lucide-react";
 import { ChangeEvent, DragEvent, FormEvent, ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
+import { workspaceRequestHeaders } from "@/lib/client-workspace";
 import { Artifact, ArtifactRelationship, CaseStudySection, Persona, PortfolioTheme, ProjectCluster, UnderstandingBacklogItem } from "@/lib/types";
 import { buildUnderstandingBacklog } from "@/lib/understanding-backlog";
 import { buildPortfolioStrategyPlan } from "@/lib/portfolio-planning-engine";
 import { buildConfirmedPortfolioBlueprint } from "@/lib/portfolio-review-engine";
 import { PortfolioBlueprintRecord, PortfolioBlueprintReviewState } from "@/lib/portfolio-blueprint-types";
 import { GenerationReadinessResult } from "@/lib/generation-readiness";
+import { studioFlowSteps, studioHashForView, studioViewFromHash, type StudioViewId } from "@/lib/product-flow";
 import { GeneratedCaseStudyDraft } from "@/lib/case-study-generation-types";
 import { CaseStudyQualityReport } from "@/lib/case-study-quality-types";
 import { CaseStudyRevisionRecord, RevisionGoal } from "@/lib/case-study-revision-types";
@@ -63,6 +60,7 @@ import { PortfolioArchetype, PortfolioStrategyPlan } from "@/lib/portfolio-strat
 import { useBlueprintReviewStore } from "@/store/blueprint-review-store";
 import { useGaps, usePortfolioStore } from "@/store/use-portfolio-store";
 import { PortfolioBuilderWorkspace } from "@/components/portfolio-builder-workspace";
+import { EditorDependencyGate, PublishReadinessPanel, StudioPreviewPanel } from "@/components/product-flow-pages";
 
 const personas: Persona[] = [
   "Technical UX Hybrid",
@@ -91,16 +89,21 @@ const MAX_BROWSER_FILE_BYTES = 4 * 1024 * 1024;
 const MAX_BROWSER_BATCH_BYTES = 4 * 1024 * 1024;
 const ACCEPTED_UPLOAD_EXTENSIONS = new Set(["pdf", "docx", "pptx", "png", "jpg", "jpeg", "webp"]);
 
-const workflow = [
-  { id: "ingest", label: "Inbox", icon: Upload },
-  { id: "intelligence", label: "Review", icon: BrainCircuit },
-  { id: "strategy", label: "Strategy", icon: SearchCheck },
-  { id: "editor", label: "Editor", icon: PenLine },
-  { id: "preview", label: "Preview", icon: MonitorUp },
-  { id: "export", label: "Publish", icon: Download }
-] as const;
+const studioIcons = {
+  ingest: Upload,
+  intelligence: BrainCircuit,
+  strategy: SearchCheck,
+  editor: PenLine,
+  preview: MonitorUp,
+  export: Download
+} satisfies Record<StudioViewId, typeof Upload>;
 
-type StudioView = (typeof workflow)[number]["id"];
+const workflow = studioFlowSteps.map((step) => ({
+  ...step,
+  icon: studioIcons[step.id]
+}));
+
+type StudioView = StudioViewId;
 
 type WorkspaceSummary = {
   workspace: { id: string; name: string };
@@ -109,16 +112,6 @@ type WorkspaceSummary = {
   authMode: string;
   productionAuthRequired: boolean;
 };
-
-function getClientWorkspaceId() {
-  if (typeof window === "undefined") return "demo-workspace";
-  const key = "auto-casestudy-workspace";
-  const existing = window.localStorage.getItem(key);
-  if (existing) return existing;
-  const created = `workspace_${crypto.randomUUID()}`;
-  window.localStorage.setItem(key, created);
-  return created;
-}
 
 function formatBytes(bytes: number) {
   return `${(bytes / 1024 / 1024).toFixed(bytes >= 1024 * 1024 ? 1 : 2)} MB`;
@@ -231,7 +224,9 @@ export function PortfolioStudio() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const [uploadSuccess, setUploadSuccess] = useState("");
-  const [activeView, setActiveView] = useState<StudioView>("ingest");
+  const [activeView, setActiveView] = useState<StudioView>(() =>
+    typeof window === "undefined" ? "ingest" : studioViewFromHash(window.location.hash)
+  );
   const [workspaceSummary, setWorkspaceSummary] = useState<WorkspaceSummary | null>(null);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -256,11 +251,17 @@ export function PortfolioStudio() {
     [persona, artifacts, sections, clusters, gaps, understandingBacklog]
   );
 
+  const navigateStudioView = useCallback((view: StudioView) => {
+    setActiveView(view);
+    if (typeof window !== "undefined" && window.location.hash !== studioHashForView(view)) {
+      window.history.pushState(null, "", studioHashForView(view));
+    }
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
-    const workspaceId = getClientWorkspaceId();
     fetch("/api/workspaces/current", {
-      headers: { "x-autocasestudy-workspace": workspaceId }
+      headers: workspaceRequestHeaders()
     })
       .then((response) => response.json())
       .then((payload) => {
@@ -272,7 +273,7 @@ export function PortfolioStudio() {
         // Workspace session establishment is retried through protected API calls.
       });
     fetch("/api/artifacts", {
-      headers: { "x-autocasestudy-workspace": workspaceId }
+      headers: workspaceRequestHeaders()
     })
       .then((response) => response.json())
       .then((payload) => {
@@ -288,6 +289,13 @@ export function PortfolioStudio() {
       cancelled = true;
     };
   }, [setEvidenceMap, syncStoredArtifacts]);
+
+  useEffect(() => {
+    const syncViewFromHash = () => setActiveView(studioViewFromHash(window.location.hash));
+    syncViewFromHash();
+    window.addEventListener("hashchange", syncViewFromHash);
+    return () => window.removeEventListener("hashchange", syncViewFromHash);
+  }, []);
 
   async function uploadFiles(files: File[]) {
     if (!files.length) return;
@@ -308,7 +316,7 @@ export function PortfolioStudio() {
     try {
       const response = await fetch("/api/artifacts", {
         method: "POST",
-        headers: { "x-autocasestudy-workspace": getClientWorkspaceId() },
+        headers: workspaceRequestHeaders(),
         body: form
       });
       const payload = await readUploadResponse(response);
@@ -411,6 +419,7 @@ export function PortfolioStudio() {
         title="Edit portfolio pages"
         detail="Tune page briefs, then refine the case study canvas."
       >
+        <EditorDependencyGate />
         <PortfolioBuilderWorkspace />
         <CaseStudyDraftWorkspace />
         <EditorPanel
@@ -434,7 +443,7 @@ export function PortfolioStudio() {
         title="Portfolio preview"
         detail="Check the public-facing site."
       >
-        <PortfolioPreview persona={persona} mode={audienceMode} theme={theme} sections={sections} artifacts={artifacts} />
+        <StudioPreviewPanel />
       </ViewShell>
     ),
     export: (
@@ -444,7 +453,7 @@ export function PortfolioStudio() {
         detail="Fix gaps before export."
       >
         <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
-          <ExportPanel evidenceCoverage={evidenceScore.coverage} gaps={gaps.length} />
+          <PublishReadinessPanel evidenceCoverage={evidenceScore.coverage} gaps={gaps.length} />
           <ProvenancePanel />
         </div>
       </ViewShell>
@@ -457,11 +466,11 @@ export function PortfolioStudio() {
         Skip to workspace
       </a>
       <div className="grid min-h-dvh lg:grid-cols-[272px_1fr]">
-        <Sidebar activeView={activeView} onView={setActiveView} />
+        <Sidebar activeView={activeView} onView={navigateStudioView} />
         <section id="workspace" className="min-w-0 overflow-x-hidden">
           <TopBar persona={persona} activeLabel={activeWorkflowItem.label} workspaceSummary={workspaceSummary} onReset={resetDemo} />
           <div className="mx-auto flex w-full max-w-[1480px] flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
-            <MobileViewTabs activeView={activeView} onView={setActiveView} />
+            <MobileViewTabs activeView={activeView} onView={navigateStudioView} />
             {workspaceView[activeView]}
           </div>
         </section>
@@ -885,7 +894,7 @@ function PortfolioReviewWorkspace({ plan, artifacts }: { plan: PortfolioStrategy
     try {
       const response = await fetch("/api/generation/readiness", {
         cache: "no-store",
-        headers: { "x-autocasestudy-workspace": getClientWorkspaceId() }
+        headers: workspaceRequestHeaders()
       });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload?.error?.message ?? "Could not validate generation readiness.");
@@ -904,7 +913,7 @@ function PortfolioReviewWorkspace({ plan, artifacts }: { plan: PortfolioStrategy
       try {
         const response = await fetch("/api/portfolio-blueprint", {
           cache: "no-store",
-          headers: { "x-autocasestudy-workspace": getClientWorkspaceId() }
+          headers: workspaceRequestHeaders()
         });
         if (!response.ok) throw new Error("Could not load saved blueprint.");
         const payload = (await response.json()) as { blueprint: PortfolioBlueprintRecord | null; revisionCount: number };
@@ -935,7 +944,7 @@ function PortfolioReviewWorkspace({ plan, artifacts }: { plan: PortfolioStrategy
     try {
       const response = await fetch("/api/portfolio-blueprint", {
         method: "PUT",
-        headers: { "Content-Type": "application/json", "x-autocasestudy-workspace": getClientWorkspaceId() },
+        headers: workspaceRequestHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({
           blueprint,
           reviewState,
@@ -960,7 +969,7 @@ function PortfolioReviewWorkspace({ plan, artifacts }: { plan: PortfolioStrategy
     try {
       const revisionsResponse = await fetch("/api/portfolio-blueprint/revisions", {
         cache: "no-store",
-        headers: { "x-autocasestudy-workspace": getClientWorkspaceId() }
+        headers: workspaceRequestHeaders()
       });
       const revisionsPayload = await revisionsResponse.json();
       if (!revisionsResponse.ok) throw new Error(revisionsPayload?.error?.message ?? "Could not load revisions.");
@@ -968,7 +977,7 @@ function PortfolioReviewWorkspace({ plan, artifacts }: { plan: PortfolioStrategy
       if (!previous) throw new Error("No previous blueprint revision is available.");
       const rollbackResponse = await fetch("/api/portfolio-blueprint/revisions", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-autocasestudy-workspace": getClientWorkspaceId() },
+        headers: workspaceRequestHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ version: previous.version })
       });
       const rollbackPayload = await rollbackResponse.json();
@@ -1292,7 +1301,7 @@ function PortfolioExperienceWorkspace() {
       try {
         const response = await fetch("/api/portfolio/experience/latest", {
           cache: "no-store",
-          headers: { "x-autocasestudy-workspace": getClientWorkspaceId() }
+          headers: workspaceRequestHeaders()
         });
         if (!response.ok) {
           if (!cancelled) setStatus("idle");
@@ -1319,7 +1328,7 @@ function PortfolioExperienceWorkspace() {
     try {
       const response = await fetch("/api/portfolio/orchestrate", {
         method: "POST",
-        headers: { "x-autocasestudy-workspace": getClientWorkspaceId() }
+        headers: workspaceRequestHeaders()
       });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload?.error?.message ?? "Could not orchestrate the portfolio experience.");
@@ -1344,7 +1353,7 @@ function PortfolioExperienceWorkspace() {
     try {
       const response = await fetch("/api/portfolio/resequence-projects", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-autocasestudy-workspace": getClientWorkspaceId() },
+        headers: workspaceRequestHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ planId: plan.id, projectIds: next })
       });
       const payload = await response.json();
@@ -1523,7 +1532,7 @@ function CaseStudyDraftWorkspace() {
       try {
         const response = await fetch("/api/generation/case-study", {
           cache: "no-store",
-          headers: { "x-autocasestudy-workspace": getClientWorkspaceId() }
+          headers: workspaceRequestHeaders()
         });
         const payload = await response.json();
         if (!cancelled) {
@@ -1551,7 +1560,7 @@ function CaseStudyDraftWorkspace() {
     try {
       const response = await fetch("/api/generation/case-study", {
         method: "POST",
-        headers: { "x-autocasestudy-workspace": getClientWorkspaceId() }
+        headers: workspaceRequestHeaders()
       });
       const payload = await response.json();
       if (!response.ok) {
@@ -1575,7 +1584,7 @@ function CaseStudyDraftWorkspace() {
     try {
       const response = await fetch("/api/generation/case-study-quality/latest", {
         cache: "no-store",
-        headers: { "x-autocasestudy-workspace": getClientWorkspaceId() }
+        headers: workspaceRequestHeaders()
       });
       if (!response.ok) return;
       const payload = await response.json();
@@ -1589,7 +1598,7 @@ function CaseStudyDraftWorkspace() {
     try {
       const response = await fetch(`/api/generation/revision-history/${draftId}`, {
         cache: "no-store",
-        headers: { "x-autocasestudy-workspace": getClientWorkspaceId() }
+        headers: workspaceRequestHeaders()
       });
       if (!response.ok) return;
       const payload = await response.json();
@@ -1604,7 +1613,7 @@ function CaseStudyDraftWorkspace() {
       const query = draftId ? `?draftId=${encodeURIComponent(draftId)}` : "";
       const response = await fetch(`/api/layout/composition/latest${query}`, {
         cache: "no-store",
-        headers: { "x-autocasestudy-workspace": getClientWorkspaceId() }
+        headers: workspaceRequestHeaders()
       });
       if (!response.ok) return;
       const payload = await response.json();
@@ -1621,7 +1630,7 @@ function CaseStudyDraftWorkspace() {
     try {
       const response = await fetch("/api/generation/evaluate-case-study", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-autocasestudy-workspace": getClientWorkspaceId() },
+        headers: workspaceRequestHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ draftId: draft.id })
       });
       const payload = await response.json();
@@ -1641,7 +1650,7 @@ function CaseStudyDraftWorkspace() {
     try {
       const response = await fetch("/api/layout/compose-case-study", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-autocasestudy-workspace": getClientWorkspaceId() },
+        headers: workspaceRequestHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ draftId: draft.id })
       });
       const payload = await response.json();
@@ -1661,7 +1670,7 @@ function CaseStudyDraftWorkspace() {
     try {
       const response = await fetch("/api/layout/regenerate-region", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-autocasestudy-workspace": getClientWorkspaceId() },
+        headers: workspaceRequestHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ compositionId: composition.id, regionId })
       });
       const payload = await response.json();
@@ -1696,7 +1705,7 @@ function CaseStudyDraftWorkspace() {
     try {
       const response = await fetch("/api/generation/revise-section", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-autocasestudy-workspace": getClientWorkspaceId() },
+        headers: workspaceRequestHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ draftId: draft.id, sectionId, goal, currentContent: section.content })
       });
       const payload = await response.json();
@@ -1730,7 +1739,7 @@ function CaseStudyDraftWorkspace() {
     try {
       const response = await fetch("/api/generation/accept-revision", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-autocasestudy-workspace": getClientWorkspaceId() },
+        headers: workspaceRequestHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ revisionId: revision.id })
       });
       const payload = await response.json();
@@ -1754,7 +1763,7 @@ function CaseStudyDraftWorkspace() {
     try {
       const response = await fetch("/api/generation/reject-revision", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-autocasestudy-workspace": getClientWorkspaceId() },
+        headers: workspaceRequestHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ revisionId: revision.id })
       });
       const payload = await response.json();
@@ -1775,7 +1784,7 @@ function CaseStudyDraftWorkspace() {
     try {
       const response = await fetch("/api/generation/lock-section", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-autocasestudy-workspace": getClientWorkspaceId() },
+        headers: workspaceRequestHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ draftId: draft.id, sectionId, locked })
       });
       const payload = await response.json();
@@ -2719,7 +2728,7 @@ function EvidenceMapPanel({
     onClusterChange(cluster);
     const response = await fetch("/api/evidence-map", {
       method: "PATCH",
-      headers: { "Content-Type": "application/json", "x-autocasestudy-workspace": getClientWorkspaceId() },
+      headers: workspaceRequestHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify({ cluster })
     });
     if (!response.ok) {
@@ -3418,182 +3427,3 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     </label>
   );
 }
-
-function PortfolioPreview({
-  persona,
-  mode,
-  theme,
-  sections,
-  artifacts
-}: {
-  persona: Persona;
-  mode: string;
-  theme: PortfolioTheme;
-  sections: CaseStudySection[];
-  artifacts: Artifact[];
-}) {
-  const light = theme !== "Instrument Dark";
-  const pages = getPortfolioPages(artifacts, sections);
-  const featuredArtifacts = artifacts.slice(0, 3);
-  const projectPage = pages.find((page) => page.id === "projects") ?? pages[0];
-  const casePage = pages.find((page) => page.id === "case-study-detail") ?? pages[0];
-  const resumePage = pages.find((page) => page.id === "resume") ?? pages[0];
-  const skillsPage = pages.find((page) => page.id === "skills") ?? pages[0];
-  const contactPage = pages.find((page) => page.id === "contact") ?? pages[0];
-  const previewTone =
-    mode === "Research"
-      ? "A methods-forward portfolio with evidence, limitations, and source traceability."
-      : mode === "Technical"
-        ? "A hybrid portfolio translating implementation depth into product credibility."
-        : "A recruiter-readable portfolio focused on role clarity, decisions, visuals, and impact.";
-
-  return (
-    <section id="preview" className={cn("rounded-lg border p-5", light ? "border-slate-200 bg-paper text-slateInk" : "border-line bg-surface text-ink")}>
-      <div className={cn("rounded-md border p-4", light ? "border-slate-200 bg-white" : "border-line bg-panel")}>
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-current/10 pb-4">
-          <div>
-            <p className={cn("text-xs uppercase tracking-[0.18em]", light ? "text-slate-500" : "text-primary")}>Published portfolio site</p>
-            <h2 className="mt-1 text-2xl font-semibold">{persona}</h2>
-          </div>
-          <nav className="flex flex-wrap gap-2 text-xs" aria-label="Preview site navigation">
-            {pages.filter((page) => !page.parent).map((page) => (
-              <span key={page.id} className={cn("rounded-full border px-2.5 py-1", light ? "border-slate-200 bg-slate-50 text-slate-600" : "border-line bg-surface text-muted")}>
-                {page.title}
-              </span>
-            ))}
-          </nav>
-        </div>
-
-        <div className="grid gap-5 py-6 lg:grid-cols-[1.1fr_0.9fr]">
-          <div>
-            <span className={cn("rounded-full px-2.5 py-1 text-xs font-semibold", light ? "bg-slate-900 text-white" : "bg-primary text-slateInk")}>{mode}</span>
-            <h3 className="mt-4 max-w-2xl text-3xl font-semibold tracking-tight">
-              Evidence-backed portfolio for a {persona.toLowerCase()}.
-            </h3>
-            <p className={cn("mt-3 max-w-2xl text-sm leading-6", light ? "text-slate-600" : "text-muted")}>{previewTone}</p>
-            <div className="mt-5 flex flex-wrap gap-2">
-              <span className={cn("rounded-md border px-3 py-2 text-xs font-semibold", light ? "border-slate-200 bg-slate-50" : "border-line bg-background")}>
-                {artifacts.length} artifacts linked
-              </span>
-              <span className={cn("rounded-md border px-3 py-2 text-xs font-semibold", light ? "border-slate-200 bg-slate-50" : "border-line bg-background")}>
-                {sections.length} case sections
-              </span>
-              <span className={cn("rounded-md border px-3 py-2 text-xs font-semibold", light ? "border-slate-200 bg-slate-50" : "border-line bg-background")}>
-                {pages.length} site pages
-              </span>
-            </div>
-          </div>
-
-          <div className={cn("rounded-md border p-4", light ? "border-slate-200 bg-slate-50" : "border-line bg-background")}>
-            <p className={cn("text-xs uppercase tracking-[0.16em]", light ? "text-slate-500" : "text-primary")}>Hero media slot</p>
-            <div className={cn("mt-3 aspect-[16/10] rounded-md border border-dashed p-4", light ? "border-slate-300 bg-white" : "border-primary/30 bg-surface")}>
-              <div className="flex h-full flex-col justify-between">
-                <ImageIcon className={cn("h-8 w-8", light ? "text-slate-400" : "text-primary")} aria-hidden />
-                <div>
-                  <p className="text-sm font-semibold">Agent-selected hero visual</p>
-                  <p className={cn("mt-1 text-xs leading-5", light ? "text-slate-500" : "text-muted")}>
-                    Uploaded screenshot, portrait, prototype still, generated visual, or short motion preview.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_0.85fr]">
-        <section className={cn("rounded-md border p-4", light ? "border-slate-200 bg-white" : "border-line bg-panel")}>
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <p className={cn("text-xs uppercase tracking-[0.16em]", light ? "text-slate-500" : "text-primary")}>Projects page</p>
-              <h3 className="mt-1 text-xl font-semibold">Project index and case-study routes</h3>
-            </div>
-            <PageStatus status={projectPage.status} />
-          </div>
-          <div className="mt-4 grid gap-3 md:grid-cols-3">
-            {featuredArtifacts.map((artifact, index) => (
-              <article key={artifact.id} className={cn("rounded-md border p-3", light ? "border-slate-200 bg-slate-50" : "border-line bg-background")}>
-                <div className={cn("mb-3 flex aspect-video items-center justify-center rounded border border-dashed", light ? "border-slate-300 bg-white" : "border-primary/25 bg-surface")}>
-                  <ImageIcon className={cn("h-5 w-5", light ? "text-slate-400" : "text-primary")} aria-hidden />
-                </div>
-                <p className="truncate text-sm font-semibold">Project {index + 1}</p>
-                <p className={cn("mt-1 text-xs", light ? "text-slate-500" : "text-muted")}>{artifact.phase}</p>
-                <p className="mt-3 text-xs font-semibold text-primary">Open case study</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className={cn("rounded-md border p-4", light ? "border-slate-200 bg-white" : "border-line bg-panel")}>
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <p className={cn("text-xs uppercase tracking-[0.16em]", light ? "text-slate-500" : "text-primary")}>Nested under Projects</p>
-              <h3 className="mt-1 text-xl font-semibold">{casePage.title}</h3>
-            </div>
-            <PageStatus status={casePage.status} />
-          </div>
-          <div className="mt-4 space-y-3">
-            {sections.slice(0, 3).map((section) => (
-              <article key={section.id} className={cn("rounded-md border p-3", light ? "border-slate-200 bg-slate-50" : "border-line bg-background")}>
-                <h4 className="text-sm font-semibold">{section.title}</h4>
-                <p className={cn("mt-1 line-clamp-2 text-xs leading-5", light ? "text-slate-600" : "text-muted")}>{section.content}</p>
-                <p className={cn("mt-2 text-xs", section.evidenceIds.length ? "text-emerald" : "text-danger")}>
-                  {section.evidenceIds.length ? `${section.evidenceIds.length} evidence source${section.evidenceIds.length === 1 ? "" : "s"}` : "No evidence found"}
-                </p>
-              </article>
-            ))}
-          </div>
-        </section>
-      </div>
-
-      <div className="mt-5 grid gap-4 md:grid-cols-3">
-        {[
-          [resumePage, "Experience, education, certifications, and resume download."],
-          [skillsPage, "Evidence-backed methods, tools, and technical credibility."],
-          [contactPage, "Contact actions, professional handoff, and share preview."]
-        ].map(([page, detail]) => (
-          <article key={(page as PortfolioPageModel).id} className={cn("rounded-md border p-4", light ? "border-slate-200 bg-white" : "border-line bg-panel")}>
-            <div className="flex items-start justify-between gap-3">
-              <h3 className="font-semibold">{(page as PortfolioPageModel).title}</h3>
-              <PageStatus status={(page as PortfolioPageModel).status} />
-            </div>
-            <p className={cn("mt-3 text-sm leading-6", light ? "text-slate-600" : "text-muted")}>{detail as string}</p>
-          </article>
-        ))}
-      </div>
-
-      <div className={cn("mt-5 rounded-md border p-3 text-xs", light ? "border-slate-200 bg-slate-50 text-slate-600" : "border-line bg-background text-muted")}>
-        <p>{artifacts.length} source artifacts linked across the portfolio site. Preview reflects the page model from Strategy and Editor.</p>
-      </div>
-    </section>
-  );
-}
-
-function ExportPanel({ evidenceCoverage, gaps }: { evidenceCoverage: number; gaps: number }) {
-  const ready = evidenceCoverage >= 80 && gaps <= 2;
-  return (
-    <section id="export" className="rounded-lg border border-line bg-surface p-5">
-      <div className="mt-4 space-y-3">
-        {[
-          ["Static web export", "Generate deployable portfolio pages", MonitorUp],
-          ["PDF portfolio packet", "Recruiter and academic share format", FileText],
-          ["Markdown handoff", "Portable content for GitHub, Notion, Webflow", ClipboardList],
-          ["Accessibility queue", "Alt text, contrast, semantic review", Accessibility]
-        ].map(([title, detail, Icon]) => (
-          <div key={title as string} className="flex items-start gap-3 rounded-md border border-line bg-panel p-3">
-            <Icon className="mt-0.5 h-4 w-4 text-primary" aria-hidden />
-            <div>
-              <p className="text-sm font-semibold">{title as string}</p>
-              <p className="mt-1 text-xs leading-5 text-muted">{detail as string}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-      <button className="mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-primary px-4 font-semibold text-slateInk transition hover:bg-primary/90">
-        {ready ? <CheckCircle2 className="h-4 w-4" aria-hidden /> : <BriefcaseBusiness className="h-4 w-4" aria-hidden />}
-        {ready ? "Package portfolio" : "Fix gaps"}
-      </button>
-    </section>
-  );
-}
-

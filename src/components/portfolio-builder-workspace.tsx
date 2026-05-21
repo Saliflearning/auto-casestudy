@@ -4,17 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { ArrowDown, ArrowUp, BadgeCheck, Eye, EyeOff, Image as ImageIcon, Lock, LockOpen, Monitor, RotateCcw, Save, Smartphone, Tablet, WandSparkles } from "lucide-react";
 import { PortfolioBuilderDevice, PortfolioSiteDraft, PortfolioThemeSettings, ProjectPageDraft } from "@/lib/portfolio-site-draft-types";
+import { workspaceRequestHeaders } from "@/lib/client-workspace";
 import { cn } from "@/lib/utils";
-
-function getClientWorkspaceId() {
-  if (typeof window === "undefined") return "demo-workspace";
-  const key = "auto-casestudy-workspace";
-  const existing = window.localStorage.getItem(key);
-  if (existing) return existing;
-  const created = `workspace_${crypto.randomUUID()}`;
-  window.localStorage.setItem(key, created);
-  return created;
-}
 
 type SaveState = "idle" | "loading" | "saving" | "saved" | "resetting" | "error";
 
@@ -38,7 +29,7 @@ export function PortfolioBuilderWorkspace() {
       try {
         const response = await fetch("/api/portfolio-site-draft", {
           cache: "no-store",
-          headers: { "x-autocasestudy-workspace": getClientWorkspaceId() }
+          headers: workspaceRequestHeaders()
         });
         const payload = await response.json();
         if (cancelled) return;
@@ -69,7 +60,7 @@ export function PortfolioBuilderWorkspace() {
     try {
       const response = await fetch("/api/portfolio-site-draft/reset-from-plan", {
         method: "POST",
-        headers: { "x-autocasestudy-workspace": getClientWorkspaceId() }
+        headers: workspaceRequestHeaders()
       });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload?.error?.message ?? "Could not reset builder draft from plan.");
@@ -89,7 +80,7 @@ export function PortfolioBuilderWorkspace() {
     try {
       const response = await fetch("/api/portfolio-site-draft", {
         method: "PUT",
-        headers: { "Content-Type": "application/json", "x-autocasestudy-workspace": getClientWorkspaceId() },
+        headers: workspaceRequestHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ draft })
       });
       const payload = await response.json();
