@@ -130,6 +130,7 @@ export function ProfileSetupPage() {
     resumeContext: ""
   });
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   useEffect(() => {
     try {
@@ -143,11 +144,18 @@ export function ProfileSetupPage() {
   function updateProfile(field: keyof typeof profile, value: string) {
     setProfile((current) => ({ ...current, [field]: value }));
     setSaved(false);
+    setSaveError("");
   }
 
   function saveProfile() {
-    window.localStorage.setItem(profileKey, JSON.stringify({ ...profile, persona, audienceMode, theme }));
-    setSaved(true);
+    try {
+      window.localStorage.setItem(profileKey, JSON.stringify({ ...profile, persona, audienceMode, theme }));
+      setSaveError("");
+      setSaved(true);
+    } catch {
+      setSaved(false);
+      setSaveError("Profile could not be saved in this browser. You can still continue, but this device may not remember the context.");
+    }
   }
 
   return (
@@ -189,6 +197,7 @@ export function ProfileSetupPage() {
                 Upload evidence <Upload className="h-4 w-4" aria-hidden />
               </Link>
               {saved ? <span className="inline-flex min-h-11 items-center rounded-md border border-emerald/25 bg-emerald/10 px-3 text-sm font-semibold text-emerald">Profile saved locally</span> : null}
+              {saveError ? <span role="alert" className="inline-flex min-h-11 items-center rounded-md border border-danger/25 bg-danger/10 px-3 text-sm font-semibold text-danger">{saveError}</span> : null}
             </div>
           </section>
 

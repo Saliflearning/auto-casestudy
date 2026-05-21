@@ -27,8 +27,8 @@ export function ProductSite() {
             <Link href="/studio#ingest" className="inline-flex min-h-11 items-center gap-2 rounded-md bg-primary px-5 font-semibold text-slateInk transition hover:bg-primary/90">
               Upload evidence <Upload className="h-4 w-4" aria-hidden />
             </Link>
-            <Link href="/projects" className="inline-flex min-h-11 items-center gap-2 rounded-md border border-line px-5 font-semibold text-ink transition hover:bg-panelHigh">
-              View portfolio structure <ArrowRight className="h-4 w-4" aria-hidden />
+            <Link href="/templates" className="inline-flex min-h-11 items-center gap-2 rounded-md border border-line px-5 font-semibold text-ink transition hover:bg-panelHigh">
+              Explore portfolio systems <ArrowRight className="h-4 w-4" aria-hidden />
             </Link>
           </div>
         </div>
