@@ -21,7 +21,7 @@ export function SiteNav() {
   function isActive(href: string) {
     const [path, itemHash] = href.split("#");
     if (pathname !== path) return false;
-    if (!itemHash) return pathname === href && !hash;
+    if (!itemHash) return true;
     return hash === `#${itemHash}`;
   }
 

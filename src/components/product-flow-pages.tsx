@@ -6,6 +6,7 @@ import type { InputHTMLAttributes, TextareaHTMLAttributes } from "react";
 import { ArrowRight, BadgeCheck, FileText, LayoutTemplate, Link as LinkIcon, Lock, MonitorUp, Save, ShieldAlert, Sparkles, Upload, UserRoundCheck } from "lucide-react";
 import { SiteNav } from "@/components/site-nav";
 import { PortfolioDraftPreview } from "@/components/portfolio-draft-preview";
+import { PortfolioBuilderWorkspace } from "@/components/portfolio-builder-workspace";
 import { flowDependencies, studioFlowSteps } from "@/lib/product-flow";
 import { GenerationReadinessResult } from "@/lib/generation-readiness";
 import { PortfolioSiteDraft } from "@/lib/portfolio-site-draft-types";
@@ -303,6 +304,32 @@ export function PreviewWorkspacePage() {
   );
 }
 
+export function BuilderWorkspacePage() {
+  return (
+    <main className="min-h-dvh">
+      <SiteNav />
+      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+        <PageHeader
+          eyebrow="Builder"
+          title="Edit the saved portfolio website draft."
+          detail="This is the dedicated builder route. It uses the same persisted plan, composition, and provenance state as the Studio editor."
+        />
+        <div className="mt-8 space-y-6">
+          <EditorDependencyGate />
+          <PortfolioBuilderWorkspace />
+          <div className="rounded-lg border border-line bg-surface p-5">
+            <p className="text-xs uppercase tracking-[0.18em] text-primary">Need the full workflow?</p>
+            <h2 className="mt-2 text-xl font-semibold text-ink">Open Studio for upload, review, strategy, generation, and revision tools.</h2>
+            <Link href="/studio#editor" className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-md border border-line px-3 text-sm font-semibold text-ink transition hover:bg-panelHigh">
+              Open Studio editor <ArrowRight className="h-4 w-4" aria-hidden />
+            </Link>
+          </div>
+        </div>
+      </section>
+    </main>
+  );
+}
+
 export function PublishWorkspacePage() {
   return (
     <main className="min-h-dvh">
@@ -432,9 +459,14 @@ export function PublishReadinessPanel({ evidenceCoverage, gaps }: { evidenceCove
         ))}
       </div>
 
-      <button type="button" disabled={!ready} className="mt-5 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-primary px-4 font-semibold text-slateInk transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50">
+      <button
+        type="button"
+        disabled
+        title={ready ? "Coming soon: hosted publishing jobs are intentionally blocked until preview persistence is verified live." : "Resolve blockers before publishing setup can be enabled."}
+        className="mt-5 inline-flex min-h-11 w-full cursor-not-allowed items-center justify-center gap-2 rounded-md bg-primary px-4 font-semibold text-slateInk opacity-60"
+      >
         {ready ? <Sparkles className="h-4 w-4" aria-hidden /> : <Lock className="h-4 w-4" aria-hidden />}
-        {ready ? "Prepare publish setup" : "Resolve blockers first"}
+        {ready ? "Publish setup coming soon" : "Resolve blockers first"}
       </button>
     </section>
   );

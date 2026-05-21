@@ -61,6 +61,7 @@ import { useBlueprintReviewStore } from "@/store/blueprint-review-store";
 import { useGaps, usePortfolioStore } from "@/store/use-portfolio-store";
 import { PortfolioBuilderWorkspace } from "@/components/portfolio-builder-workspace";
 import { EditorDependencyGate, PublishReadinessPanel, StudioPreviewPanel } from "@/components/product-flow-pages";
+import { SiteNav } from "@/components/site-nav";
 
 const personas: Persona[] = [
   "Technical UX Hybrid",
@@ -462,10 +463,11 @@ export function PortfolioStudio() {
 
   return (
     <main className="min-h-dvh overflow-x-hidden">
+      <SiteNav />
       <a href="#workspace" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-primary focus:px-4 focus:py-3 focus:text-slateInk">
         Skip to workspace
       </a>
-      <div className="grid min-h-dvh lg:grid-cols-[272px_1fr]">
+      <div className="grid min-h-[calc(100dvh-76px)] lg:grid-cols-[272px_1fr]">
         <Sidebar activeView={activeView} onView={navigateStudioView} />
         <section id="workspace" className="min-w-0 overflow-x-hidden">
           <TopBar persona={persona} activeLabel={activeWorkflowItem.label} workspaceSummary={workspaceSummary} onReset={resetDemo} />
@@ -527,7 +529,7 @@ function TopBar({
   onReset: () => void;
 }) {
   return (
-    <header className="sticky top-0 z-30 border-b border-line bg-background/90 px-4 py-3 backdrop-blur sm:px-6 lg:px-8">
+    <header className="border-b border-line bg-background/90 px-4 py-3 backdrop-blur sm:px-6 lg:px-8">
       <div className="mx-auto flex max-w-[1480px] flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-xs uppercase tracking-[0.24em] text-primary">AI portfolio agent</p>
@@ -2959,7 +2961,7 @@ function EditorPanel({
           placeholder="Ask for recruiter, academic, or technical tone"
           className="min-h-11 flex-1 rounded-md border border-line bg-background px-3 text-sm text-ink placeholder:text-faint"
         />
-        <button className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-primary px-4 font-semibold text-slateInk transition hover:bg-primary/90">
+        <button type="submit" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-primary px-4 font-semibold text-slateInk transition hover:bg-primary/90">
           Apply prompt <Sparkles className="h-4 w-4" aria-hidden />
         </button>
       </form>
@@ -3020,7 +3022,7 @@ function EditorPanel({
                 <p className="text-xs uppercase tracking-[0.18em] text-primary">Case study canvas</p>
                 <h3 className="mt-1 text-xl font-semibold">Portfolio story draft</h3>
               </div>
-            <button onClick={onRegenerate} className="inline-flex min-h-9 items-center gap-2 rounded-md border border-line px-2 text-xs font-semibold text-muted transition hover:bg-panelHigh hover:text-ink">
+            <button type="button" onClick={onRegenerate} className="inline-flex min-h-9 items-center gap-2 rounded-md border border-line px-2 text-xs font-semibold text-muted transition hover:bg-panelHigh hover:text-ink">
               <WandSparkles className="h-3.5 w-3.5" aria-hidden />
               Regenerate
             </button>
@@ -3188,13 +3190,13 @@ function PageEditorCanvas({
       />
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <button type="button" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-line px-3 text-sm font-semibold text-muted transition hover:bg-panelHigh hover:text-ink">
+        <button type="button" disabled title="Coming soon: section block creation will be wired after the saved draft model supports new custom blocks." className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-line px-3 text-sm font-semibold text-muted opacity-60 disabled:cursor-not-allowed">
           <Layers3 className="h-4 w-4" aria-hidden />
-          Add section block
+          Add section block - coming soon
         </button>
-        <button type="button" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-line px-3 text-sm font-semibold text-muted transition hover:bg-panelHigh hover:text-ink">
+        <button type="button" disabled title="Coming soon: manual evidence attachment will be wired to persisted provenance editing." className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-line px-3 text-sm font-semibold text-muted opacity-60 disabled:cursor-not-allowed">
           <Link className="h-4 w-4" aria-hidden />
-          Attach evidence
+          Attach evidence - coming soon
         </button>
       </div>
     </div>
@@ -3240,6 +3242,7 @@ function SortableSection({
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <button
+            type="button"
             className="inline-flex min-h-11 w-11 items-center justify-center rounded-md border border-line text-muted transition hover:bg-panelHigh hover:text-ink"
             aria-label={`Drag ${section.title}`}
             {...attributes}

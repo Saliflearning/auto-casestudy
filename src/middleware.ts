@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const protectedPrefixes = ["/studio", "/references", "/api/artifacts", "/api/evidence-map", "/api/portfolio-references"];
+const protectedPrefixes = ["/profile", "/projects", "/studio", "/builder", "/preview", "/templates", "/publish", "/references", "/api"];
 
 function isProtectedPath(pathname: string) {
   return protectedPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
@@ -36,5 +36,15 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/studio/:path*", "/references/:path*", "/api/artifacts/:path*", "/api/evidence-map/:path*", "/api/portfolio-references/:path*"]
+  matcher: [
+    "/profile/:path*",
+    "/projects/:path*",
+    "/studio/:path*",
+    "/builder/:path*",
+    "/preview/:path*",
+    "/templates/:path*",
+    "/publish/:path*",
+    "/references/:path*",
+    "/api/:path*"
+  ]
 };

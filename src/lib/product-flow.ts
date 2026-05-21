@@ -86,7 +86,7 @@ export const productRoutes: ProductRoute[] = [
     primary: true
   },
   {
-    href: "/studio#ingest",
+    href: "/studio",
     label: "Studio",
     responsibility: "Evidence-first workflow from upload through publish readiness.",
     dependsOn: "Workspace session.",
@@ -94,7 +94,7 @@ export const productRoutes: ProductRoute[] = [
     primary: true
   },
   {
-    href: "/studio#editor",
+    href: "/builder",
     label: "Builder",
     responsibility: "Framer-style editing constrained by the evidence-backed spine.",
     dependsOn: "Persisted blueprint, case-study draft, compositions, and orchestration.",
