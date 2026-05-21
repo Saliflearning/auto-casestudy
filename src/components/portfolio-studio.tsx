@@ -57,6 +57,7 @@ import { GenerationReadinessResult } from "@/lib/generation-readiness";
 import { GeneratedCaseStudyDraft } from "@/lib/case-study-generation-types";
 import { CaseStudyQualityReport } from "@/lib/case-study-quality-types";
 import { CaseStudyRevisionRecord, RevisionGoal } from "@/lib/case-study-revision-types";
+import { PortfolioPageComposition } from "@/lib/layout-composition-types";
 import { PortfolioArchetype, PortfolioStrategyPlan } from "@/lib/portfolio-strategy-types";
 import { useBlueprintReviewStore } from "@/store/blueprint-review-store";
 import { useGaps, usePortfolioStore } from "@/store/use-portfolio-store";
@@ -1286,6 +1287,8 @@ function CaseStudyDraftWorkspace() {
   const [revisionGoal, setRevisionGoal] = useState<RevisionGoal>("better clarity");
   const [revisionStatus, setRevisionStatus] = useState<"idle" | "revising" | "accepting" | "rejecting" | "locking" | "error">("idle");
   const [activeRevisionSectionId, setActiveRevisionSectionId] = useState("");
+  const [composition, setComposition] = useState<PortfolioPageComposition | null>(null);
+  const [compositionStatus, setCompositionStatus] = useState<"idle" | "composing" | "regenerating" | "error">("idle");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -1303,6 +1306,7 @@ function CaseStudyDraftWorkspace() {
           if (payload.draft) {
             void loadQualityReport();
             void loadRevisionHistory(payload.draft.id);
+            void loadComposition(payload.draft.id);
           }
         }
       } catch {
@@ -1333,6 +1337,7 @@ function CaseStudyDraftWorkspace() {
       setQualityReport(null);
       setRevision(null);
       setRevisionHistory([]);
+      setComposition(null);
       setStatus("idle");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Case study generation is blocked.");
@@ -1368,6 +1373,21 @@ function CaseStudyDraftWorkspace() {
     }
   }
 
+  async function loadComposition(draftId?: string) {
+    try {
+      const query = draftId ? `?draftId=${encodeURIComponent(draftId)}` : "";
+      const response = await fetch(`/api/layout/composition/latest${query}`, {
+        cache: "no-store",
+        headers: { "x-autocasestudy-workspace": getClientWorkspaceId() }
+      });
+      if (!response.ok) return;
+      const payload = await response.json();
+      setComposition(payload.composition ?? null);
+    } catch {
+      // Layout composition is optional until the user composes the draft.
+    }
+  }
+
   async function evaluateDraft() {
     if (!draft) return;
     setQualityStatus("evaluating");
@@ -1385,6 +1405,46 @@ function CaseStudyDraftWorkspace() {
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not evaluate case study quality.");
       setQualityStatus("error");
+    }
+  }
+
+  async function composeLayout() {
+    if (!draft) return;
+    setCompositionStatus("composing");
+    setError("");
+    try {
+      const response = await fetch("/api/layout/compose-case-study", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-autocasestudy-workspace": getClientWorkspaceId() },
+        body: JSON.stringify({ draftId: draft.id })
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload?.error?.message ?? "Could not compose the case study layout.");
+      setComposition(payload.composition);
+      setCompositionStatus("idle");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not compose the case study layout.");
+      setCompositionStatus("error");
+    }
+  }
+
+  async function regenerateLayoutRegion(regionId: string) {
+    if (!composition) return;
+    setCompositionStatus("regenerating");
+    setError("");
+    try {
+      const response = await fetch("/api/layout/regenerate-region", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-autocasestudy-workspace": getClientWorkspaceId() },
+        body: JSON.stringify({ compositionId: composition.id, regionId })
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload?.error?.message ?? "Could not refresh this layout region.");
+      setComposition(payload.composition);
+      setCompositionStatus("idle");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not refresh this layout region.");
+      setCompositionStatus("error");
     }
   }
 
@@ -1452,6 +1512,7 @@ function CaseStudyDraftWorkspace() {
       setRevision(payload.revision);
       setDraft(payload.draft);
       setQualityReport(payload.report);
+      setComposition(null);
       await loadRevisionHistory(draft.id);
       setRevisionStatus("idle");
     } catch (caught) {
@@ -1528,6 +1589,13 @@ function CaseStudyDraftWorkspace() {
         <div className="mt-5 grid gap-4 xl:grid-cols-[1fr_320px]">
           <div className="space-y-3">
             <CaseStudyQualityPanel report={qualityReport} onEvaluate={evaluateDraft} isEvaluating={qualityStatus === "evaluating"} />
+            <LayoutCompositionWorkspace
+              composition={composition}
+              onCompose={composeLayout}
+              onRegenerateRegion={regenerateLayoutRegion}
+              isComposing={compositionStatus === "composing"}
+              isRegenerating={compositionStatus === "regenerating"}
+            />
             <div className="rounded-md border border-line bg-panel p-4">
               <div className="flex flex-wrap items-end justify-between gap-3">
                 <div>
@@ -1647,6 +1715,165 @@ function CaseStudyDraftWorkspace() {
       ) : (
         <div className="mt-5 rounded-md border border-line bg-panel p-4 text-sm text-muted">
           No case study draft yet. Save a confirmed blueprint, pass the readiness gate, then generate one constrained project story.
+        </div>
+      )}
+    </section>
+  );
+}
+
+function LayoutCompositionWorkspace({
+  composition,
+  onCompose,
+  onRegenerateRegion,
+  isComposing,
+  isRegenerating
+}: {
+  composition: PortfolioPageComposition | null;
+  onCompose: () => void;
+  onRegenerateRegion: (regionId: string) => void;
+  isComposing: boolean;
+  isRegenerating: boolean;
+}) {
+  const desktop = composition?.responsivePlan.desktop;
+  const primaryRegions = composition?.regions.filter((region) => region.kind !== "evidence-warning").slice(0, 5) ?? [];
+  const warningRegions = composition?.regions.filter((region) => region.kind === "evidence-warning" || region.warnings.length) ?? [];
+
+  return (
+    <section className="rounded-md border border-line bg-panel p-4" aria-label="Layout composition workspace">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-xs uppercase tracking-[0.16em] text-primary">Layout composition</p>
+          <h3 className="mt-1 text-lg font-semibold text-ink">
+            {composition ? "Portfolio page structure composed" : "Compose the case study page"}
+          </h3>
+          <p className="mt-1 max-w-2xl text-sm leading-6 text-muted">
+            Turns the approved draft into responsive regions, media slots, hierarchy, and provenance overlays.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onCompose}
+          disabled={isComposing}
+          className="inline-flex min-h-9 items-center gap-2 rounded-md border border-primary/30 bg-primary/15 px-3 text-xs font-semibold text-primary hover:bg-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          <Layers3 className="h-3.5 w-3.5" aria-hidden />
+          {isComposing ? "Composing..." : composition ? "Recompose layout" : "Compose layout"}
+        </button>
+      </div>
+
+      {composition ? (
+        <div className="mt-4 grid gap-4 xl:grid-cols-[1fr_280px]">
+          <div className="space-y-3">
+            <div className="rounded-md border border-line bg-background p-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.14em] text-faint">Composed page preview</p>
+                  <h4 className="mt-1 font-semibold text-ink">{composition.title}</h4>
+                </div>
+                <span className={cn("rounded-full px-2 py-1 text-xs font-semibold", composition.status === "Composed" ? "bg-emerald/15 text-emerald" : "bg-amber/15 text-amber")}>
+                  {composition.status}
+                </span>
+              </div>
+              <div className="mt-4 grid gap-3 lg:grid-cols-12">
+                {primaryRegions.map((region) => {
+                  const desktopRegion = desktop?.regions.find((item) => item.regionId === region.id);
+                  const span = desktopRegion?.columnSpan ?? 6;
+                  return (
+                    <article
+                      key={region.id}
+                      className={cn(
+                        "rounded-md border border-line bg-panel p-3",
+                        span >= 12 ? "lg:col-span-12" : span >= 8 ? "lg:col-span-8" : span >= 6 ? "lg:col-span-6" : "lg:col-span-4"
+                      )}
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.12em] text-primary">{region.kind}</p>
+                          <h5 className="mt-1 text-sm font-semibold text-ink">{region.title}</h5>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => onRegenerateRegion(region.id)}
+                          disabled={isRegenerating || !region.editable}
+                          className="rounded-md border border-line px-2 py-1 text-[11px] text-muted hover:text-ink disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {isRegenerating ? "Refreshing" : "Refresh"}
+                        </button>
+                      </div>
+                      <p className="mt-2 line-clamp-3 text-xs leading-5 text-muted">{region.contentSummary}</p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <span className="rounded-full border border-line bg-background px-2 py-1 text-[11px] text-muted">{region.variant}</span>
+                        <span className="rounded-full border border-line bg-background px-2 py-1 text-[11px] text-muted">{region.evidenceCount} sources</span>
+                        {region.mediaIds.length ? <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-1 text-[11px] text-primary">{region.mediaIds.length} media</span> : null}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="grid gap-3 lg:grid-cols-3">
+              {Object.values(composition.responsivePlan).map((plan) => (
+                <div key={plan.viewport} className="rounded-md border border-line bg-background p-3">
+                  <p className="text-xs uppercase tracking-[0.14em] text-faint">{plan.viewport}</p>
+                  <p className="mt-1 text-sm font-semibold text-ink">{plan.columns} columns - {plan.rhythm}</p>
+                  <div className="mt-3 grid gap-1" style={{ gridTemplateColumns: `repeat(${Math.min(plan.columns, 6)}, minmax(0, 1fr))` }}>
+                    {plan.regions.slice(0, 10).map((region) => (
+                      <span
+                        key={`${plan.viewport}-${region.regionId}`}
+                        className={cn(
+                          "h-2 rounded-full",
+                          region.emphasis === "primary" ? "bg-primary" : region.emphasis === "guardrail" ? "bg-amber" : region.emphasis === "secondary" ? "bg-emerald" : "bg-muted"
+                        )}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <aside className="space-y-3">
+            <div className="rounded-md border border-line bg-background p-3">
+              <p className="text-xs uppercase tracking-[0.14em] text-primary">Archetype strategy</p>
+              <div className="mt-3 space-y-2">
+                {composition.archetypeStrategy.map((note) => (
+                  <p key={note} className="text-xs leading-5 text-muted">{note}</p>
+                ))}
+              </div>
+            </div>
+            <div className="rounded-md border border-line bg-background p-3">
+              <p className="text-xs uppercase tracking-[0.14em] text-primary">Media map</p>
+              <div className="mt-3 space-y-2">
+                {composition.mediaPlacements.length ? composition.mediaPlacements.map((media) => (
+                  <div key={media.id} className="rounded-md border border-line bg-panel p-2">
+                    <p className="text-xs font-semibold text-ink">{media.placement}</p>
+                    <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-muted">{media.caption}</p>
+                  </div>
+                )) : <p className="text-xs leading-5 text-muted">No approved visuals yet. The composed page stays text-led until evidence-backed media exists.</p>}
+              </div>
+            </div>
+            <div className="rounded-md border border-line bg-background p-3">
+              <p className="text-xs uppercase tracking-[0.14em] text-primary">Visual rhythm</p>
+              <p className="mt-1 text-lg font-semibold text-ink">{composition.visualRhythm.score}%</p>
+              <p className="mt-1 text-xs leading-5 text-muted">{composition.visualRhythm.notes[0]}</p>
+            </div>
+            {warningRegions.length ? (
+              <div className="rounded-md border border-amber/25 bg-amber/10 p-3">
+                <p className="text-xs uppercase tracking-[0.14em] text-amber">Visible guardrails</p>
+                <p className="mt-2 text-xs leading-5 text-amber">{warningRegions.length} regions keep weak evidence or missing proof visible.</p>
+              </div>
+            ) : null}
+          </aside>
+        </div>
+      ) : (
+        <div className="mt-4 grid gap-3 lg:grid-cols-3">
+          {["Responsive regions", "Media placement map", "Provenance overlays"].map((item) => (
+            <div key={item} className="rounded-md border border-line bg-background p-3">
+              <p className="text-sm font-semibold text-ink">{item}</p>
+              <p className="mt-1 text-xs leading-5 text-muted">Created after the draft exists and can be traced back to approved evidence.</p>
+            </div>
+          ))}
         </div>
       )}
     </section>
