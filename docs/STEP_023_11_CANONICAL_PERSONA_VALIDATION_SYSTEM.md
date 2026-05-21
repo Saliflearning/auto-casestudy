@@ -183,6 +183,7 @@ Local production build route smoke:
 | Validated | 0 |
 | Needs attention | 5 |
 | Failed | 0 |
+| Critical readiness findings | 5 |
 | Technical UX Hybrid score | 79 |
 | Technical UX Hybrid status | needs attention |
 | Technical UX Hybrid readiness | blocked |
@@ -191,11 +192,11 @@ Persona-level local results:
 
 | Persona | Overall | Status | Readiness | Warnings | Fails |
 | --- | ---: | --- | --- | ---: | ---: |
-| UX Research Student | 70 | needs attention | blocked | 5 | 0 |
-| Technical UX Hybrid | 79 | needs attention | blocked | 3 | 0 |
-| Cloud Engineer | 67 | needs attention | blocked | 4 | 0 |
-| Junior Product Designer | 61 | needs attention | blocked | 6 | 0 |
-| Messy Real User | 72 | needs attention | blocked | 3 | 0 |
+| UX Research Student | 70 | needs attention | blocked | 5 | 1 |
+| Technical UX Hybrid | 79 | needs attention | blocked | 3 | 1 |
+| Cloud Engineer | 67 | needs attention | blocked | 4 | 1 |
+| Junior Product Designer | 61 | needs attention | blocked | 6 | 1 |
+| Messy Real User | 72 | needs attention | blocked | 3 | 1 |
 
 Interpretation: the pipeline completes, but the validation system correctly refuses to pretend the outputs are publish-ready. This is the right behavior before Step 024.
 

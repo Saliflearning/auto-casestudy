@@ -21,6 +21,8 @@ The live API returns full structured reports:
 | Junior Product Designer | 61 | needs attention | blocked | Visuals are promising, but weak research documentation lowers trust. |
 | Messy Real User | 72 | needs attention | blocked | The system survives messy inputs and keeps ambiguity visible instead of hallucinating certainty. |
 
+All five reports currently include one critical readiness finding because the generation gate remains blocked. That is expected in this validation phase and protects the product from treating incomplete evidence as publish-ready.
+
 ## Report Contract
 
 Each API report includes:
