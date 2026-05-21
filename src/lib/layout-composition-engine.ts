@@ -174,7 +174,7 @@ export function regenerateCompositionRegion(input: {
         ? {
             ...item,
             variant: nextVariant,
-            rationale: `${item.rationale} Region layout was refreshed without changing approved content or provenance.`
+            rationale: `${item.rationale} Region layout was refreshed without changing approved content or source links.`
           }
         : item
     ),

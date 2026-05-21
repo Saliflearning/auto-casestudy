@@ -93,7 +93,7 @@ export function buildPortfolioSiteDraftFromPlan(input: {
       headline: plan?.homepage.headline ?? input.blueprint?.blueprint.approvedHomepageStrategy.positioning ?? "Evidence-backed portfolio",
       subtitle: plan?.homepage.subheadline ?? "Create a portfolio from persisted evidence-backed strategy.",
       featuredProjectId: plan?.homepage.featuredProjectId ?? input.blueprint?.blueprint.approvedHomepageStrategy.featuredProjectId,
-      proofBlocks: plan?.homepage.featuredProof ?? [`${input.blueprint?.blueprint.provenance.length ?? 0} provenance references`],
+      proofBlocks: plan?.homepage.featuredProof ?? [`${input.blueprint?.blueprint.provenance.length ?? 0} source links`],
       projectPreviewOrder: projectPages.map((project) => project.projectId),
       ctaLabels: {
         primary: "View featured project",

@@ -110,7 +110,7 @@ export function generateConstrainedCaseStudy(input: {
       title: "Project Overview",
       type: "overview",
       artifacts: sourceArtifacts,
-      content: `${projectTitle} is framed as a ${approved.archetype} case study using approved evidence from ${allEvidenceLabel}. The draft is intentionally editable and keeps provenance attached before publication.`
+      content: `${projectTitle} is framed as a ${approved.archetype} case study using approved evidence from ${allEvidenceLabel}. The draft is intentionally editable and keeps source links attached before publication.`
     }),
     buildSection({
       id: "role",
@@ -238,9 +238,9 @@ export function generateConstrainedCaseStudy(input: {
       })),
     unresolvedIssues,
     generationNotes: [
-      "Generated from persisted confirmed blueprint only.",
+      "Generated from the approved portfolio plan only.",
       "Unsupported outcomes remain visible instead of being invented.",
-      "Each section is editable and carries provenance metadata."
+      "Each section is editable and carries source-link metadata."
     ],
     provenance: caseStudyPlan?.evidence.length ? caseStudyPlan.evidence : approved.provenance,
     createdAt: now,

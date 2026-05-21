@@ -63,7 +63,7 @@ export function planResponsiveLayouts(regions: LayoutRegion[], archetype: Portfo
       columns: 1,
       rhythm: "stacked",
       regions: mobileRegions,
-      notes: ["Use a single-column reading order.", "Keep provenance chips below the statement they support."]
+      notes: ["Use a single-column reading order.", "Keep source chips below the statement they support."]
     }
   };
 }

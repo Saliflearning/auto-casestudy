@@ -31,32 +31,32 @@ export function validateGenerationReadiness(input: { workspaceId: string; bluepr
   const { blueprint } = input;
 
   if (!blueprint) {
-    issues.push(issue("missing-persisted-blueprint", "blocker", "blueprint", "No persisted confirmed blueprint exists for this workspace."));
+    issues.push(issue("missing-persisted-blueprint", "blocker", "blueprint", "Complete and save your portfolio plan before generating pages."));
   } else {
     const approved = blueprint.blueprint;
     if (!approved.approvedHomepageStrategy.approved) {
-      issues.push(issue("homepage-not-approved", "blocker", "blueprint", "Homepage strategy has not been approved."));
+      issues.push(issue("homepage-not-approved", "blocker", "blueprint", "Approve the homepage direction before generating pages."));
     }
     if (!approved.approvedHomepageStrategy.featuredProjectId) {
-      issues.push(issue("missing-featured-project", "blocker", "blueprint", "No approved featured project is selected."));
+      issues.push(issue("missing-featured-project", "blocker", "blueprint", "Choose a featured project for the homepage."));
     }
     if (!approved.approvedHomepageStrategy.heroProofId) {
-      issues.push(issue("missing-hero-proof", "blocker", "evidence", "Homepage hero proof is missing."));
+      issues.push(issue("missing-hero-proof", "blocker", "evidence", "Choose the strongest proof to support the homepage headline."));
     }
     if (!approved.approvedProjectOrder.length) {
-      issues.push(issue("missing-project-order", "blocker", "blueprint", "No approved project order exists."));
+      issues.push(issue("missing-project-order", "blocker", "blueprint", "Approve the project order before generating pages."));
     }
     if (approved.unresolvedBlockerIds.length) {
-      issues.push(issue("unresolved-blockers", "blocker", "evidence", `${approved.unresolvedBlockerIds.length} generation blocker(s) remain unresolved.`));
+      issues.push(issue("unresolved-blockers", "blocker", "evidence", `${approved.unresolvedBlockerIds.length} portfolio issue(s) still need attention.`));
     }
     if (!approved.provenance.length) {
-      issues.push(issue("missing-provenance", "blocker", "provenance", "No provenance references are attached to the blueprint."));
+      issues.push(issue("missing-provenance", "blocker", "provenance", "No source links are attached to the portfolio plan."));
     }
     if (!approved.approvedVisualIds.length && !approved.approvedHomepageStrategy.heroVisualId) {
-      issues.push(issue("missing-approved-visuals", "warning", "media", "No approved visuals are available for portfolio generation."));
+      issues.push(issue("missing-approved-visuals", "warning", "media", "No approved visuals are available for the portfolio."));
     }
     if (approved.readinessScore < 68) {
-      issues.push(issue("low-readiness-score", approved.readinessScore < 45 ? "blocker" : "warning", "blueprint", `Blueprint readiness is ${approved.readinessScore}%, below the generation threshold.`));
+      issues.push(issue("low-readiness-score", approved.readinessScore < 45 ? "blocker" : "warning", "blueprint", `Portfolio readiness is ${approved.readinessScore}%, below the quality target.`));
     }
   }
 

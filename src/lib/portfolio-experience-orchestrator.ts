@@ -67,8 +67,8 @@ function buildHomepageStrategy(blueprint: ConfirmedPortfolioBlueprint, compositi
     featuredProjectId,
     featuredProof: [
       blueprint.approvedHomepageStrategy.heroProofId ?? "Hero proof missing",
-      `${blueprint.provenance.length} provenance references`,
-      `${blueprint.readinessScore}% blueprint readiness`
+      `${blueprint.provenance.length} source links`,
+      `${blueprint.readinessScore}% portfolio readiness`
     ],
     heroVisualId: approvedVisual?.id,
     credibilityHierarchy: [

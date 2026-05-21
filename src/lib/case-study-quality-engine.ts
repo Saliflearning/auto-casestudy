@@ -50,7 +50,7 @@ function evaluateMedia(draft: GeneratedCaseStudyDraft) {
         id: `media-no-provenance-${media.id}`,
         category: "media",
         severity: "major",
-        message: "A media item lacks provenance.",
+        message: "A media item lacks a source link.",
         suggestion: "Attach the visual to a source artifact before publishing."
       });
     }

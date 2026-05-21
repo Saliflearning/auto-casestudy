@@ -8,12 +8,20 @@ import { workspaceRequestHeaders } from "@/lib/client-workspace";
 import { cn } from "@/lib/utils";
 
 type SaveState = "idle" | "loading" | "saving" | "saved" | "resetting" | "error";
+type BuilderTool = "pages" | "content" | "evidence" | "quality" | "theme";
 
 const typographyOptions: PortfolioThemeSettings["typography"][] = ["clean sans", "editorial", "technical mono"];
 const spacingOptions: PortfolioThemeSettings["spacing"][] = ["compact", "comfortable", "spacious"];
 const colorOptions: PortfolioThemeSettings["colorMood"][] = ["instrument dark", "recruiter light", "warm editorial"];
 const appearanceOptions: PortfolioThemeSettings["appearance"][] = ["dark", "light"];
 const buttonOptions: PortfolioThemeSettings["buttonStyle"][] = ["solid", "outline", "soft"];
+const builderTools: Array<{ id: BuilderTool; label: string; detail: string }> = [
+  { id: "pages", label: "Pages", detail: "Choose home or project pages." },
+  { id: "content", label: "Content", detail: "Edit headlines, sections, and captions." },
+  { id: "evidence", label: "Evidence", detail: "Keep source links visible." },
+  { id: "quality", label: "Quality", detail: "Track issues and revision needs." },
+  { id: "theme", label: "Theme", detail: "Tune style and responsive preview." }
+];
 
 export function PortfolioBuilderWorkspace() {
   const [draft, setDraft] = useState<PortfolioSiteDraft | null>(null);
@@ -21,6 +29,7 @@ export function PortfolioBuilderWorkspace() {
   const [error, setError] = useState("");
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [selectedPanel, setSelectedPanel] = useState<"home" | "project">("home");
+  const [activeTool, setActiveTool] = useState<BuilderTool>("pages");
 
   useEffect(() => {
     let cancelled = false;
@@ -64,12 +73,12 @@ export function PortfolioBuilderWorkspace() {
         headers: workspaceRequestHeaders()
       });
       const payload = await response.json();
-      if (!response.ok) throw new Error(payload?.error?.message ?? "Could not reset builder draft from plan.");
+      if (!response.ok) throw new Error(payload?.error?.message ?? "Could not create the portfolio draft from your plan.");
       setDraft(payload.draft);
       setSelectedProjectId(payload.draft?.projectPages?.[0]?.projectId ?? "");
       setSaveState("saved");
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Could not reset builder draft from plan.");
+      setError(caught instanceof Error ? caught.message : "Could not create the portfolio draft from your plan.");
       setSaveState("error");
     }
   }
@@ -178,10 +187,10 @@ export function PortfolioBuilderWorkspace() {
     <section className="rounded-lg border border-line bg-surface p-5" aria-label="Editable portfolio builder shell">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-xs uppercase tracking-[0.18em] text-primary">Builder shell</p>
-          <h2 className="mt-2 text-2xl font-semibold text-ink">Edit the portfolio experience</h2>
+          <p className="text-xs uppercase tracking-[0.18em] text-primary">Website builder</p>
+          <h2 className="mt-2 text-2xl font-semibold text-ink">Edit pages, content, and visual direction</h2>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
-            Framer-style editing, constrained by the persisted evidence plan, composed layouts, and provenance spine.
+            Shape the portfolio website while source links and evidence warnings stay attached.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -192,7 +201,7 @@ export function PortfolioBuilderWorkspace() {
             className="inline-flex min-h-10 items-center gap-2 rounded-md border border-line px-3 text-sm font-semibold text-muted transition hover:bg-panelHigh hover:text-ink disabled:cursor-not-allowed disabled:opacity-60"
           >
             <RotateCcw className="h-4 w-4" aria-hidden />
-            {saveState === "resetting" ? "Resetting..." : "Reset from plan"}
+            {saveState === "resetting" ? "Creating..." : "Create from plan"}
           </button>
           <button
             type="button"
@@ -204,6 +213,25 @@ export function PortfolioBuilderWorkspace() {
             {saveState === "saving" ? "Saving..." : "Save draft"}
           </button>
         </div>
+      </div>
+
+      <div className="mt-5 grid gap-2 md:grid-cols-5" role="tablist" aria-label="Builder tools">
+        {builderTools.map((tool) => (
+          <button
+            key={tool.id}
+            type="button"
+            role="tab"
+            onClick={() => setActiveTool(tool.id)}
+            aria-selected={activeTool === tool.id}
+            className={cn(
+              "rounded-md border p-3 text-left transition",
+              activeTool === tool.id ? "border-primary/40 bg-primary/10 text-primary" : "border-line bg-panel text-muted hover:text-ink"
+            )}
+          >
+            <span className="block text-sm font-semibold">{tool.label}</span>
+            <span className="mt-1 block text-xs leading-5">{tool.detail}</span>
+          </button>
+        ))}
       </div>
 
       {error ? <p className="mt-4 rounded-md border border-danger/25 bg-danger/10 p-3 text-sm text-danger">{error}</p> : null}
@@ -235,15 +263,16 @@ export function PortfolioBuilderWorkspace() {
           <BuilderSettingsPanel
             draft={draft}
             saveState={saveState}
+            activeTool={activeTool}
             onTheme={updateTheme}
             onDevice={setDevice}
           />
         </div>
       ) : (
         <div className="mt-5 rounded-md border border-line bg-panel p-5">
-          <p className="text-sm font-semibold text-ink">No builder draft yet</p>
+          <p className="text-sm font-semibold text-ink">No portfolio draft yet</p>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
-            Create one from the persisted orchestration plan after Strategy has a confirmed blueprint, layout composition, and portfolio orchestration.
+            Finish Strategy, then create a draft from the approved portfolio plan.
           </p>
         </div>
       )}
@@ -459,62 +488,125 @@ function BuilderCanvas({
 function BuilderSettingsPanel({
   draft,
   saveState,
+  activeTool,
   onTheme,
   onDevice
 }: {
   draft: PortfolioSiteDraft;
   saveState: SaveState;
+  activeTool: BuilderTool;
   onTheme: <K extends keyof PortfolioThemeSettings>(field: K, value: PortfolioThemeSettings[K]) => void;
   onDevice: (device: PortfolioBuilderDevice) => void;
 }) {
+  const visibleSections = draft.projectPages.flatMap((project) => project.sectionBlocks).filter((section) => section.visible).length;
+  const hiddenSections = draft.projectPages.flatMap((project) => project.sectionBlocks).filter((section) => !section.visible).length;
+  const revisionCount = draft.projectPages.flatMap((project) => project.sectionBlocks).filter((section) => section.needsRevision).length;
+  const warningCount =
+    draft.guardrails.length +
+    draft.homepage.warnings.length +
+    draft.projectPages.reduce((sum, project) => sum + project.warnings.length + project.sectionBlocks.reduce((sectionSum, section) => sectionSum + section.warnings.length, 0), 0);
+  const sourceCount = draft.provenance.length + draft.homepage.provenance.length + draft.projectPages.reduce((sum, project) => sum + project.provenance.length, 0);
+
   return (
     <aside className="space-y-4 rounded-md border border-line bg-panel p-4" aria-label="Builder settings panel">
       <div>
-        <p className="text-xs uppercase tracking-[0.16em] text-primary">Save state</p>
+        <p className="text-xs uppercase tracking-[0.16em] text-primary">Draft status</p>
         <p className="mt-1 text-sm font-semibold text-ink">{saveState === "saved" ? "Saved" : saveState === "loading" ? "Loading" : saveState === "error" ? "Needs attention" : "Draft changes"}</p>
         <p className="mt-1 text-xs leading-5 text-muted">Last updated {new Date(draft.updatedAt).toLocaleString()}</p>
       </div>
 
-      <div className="border-t border-line pt-4">
-        <p className="text-xs uppercase tracking-[0.16em] text-primary">Responsive preview</p>
-        <div className="mt-3 grid grid-cols-3 gap-2">
-          {[
-            ["desktop", Monitor],
-            ["tablet", Tablet],
-            ["mobile", Smartphone]
-          ].map(([device, Icon]) => (
-            <button
-              key={device as string}
-              type="button"
-              onClick={() => onDevice(device as PortfolioBuilderDevice)}
-              className={cn("inline-flex min-h-10 items-center justify-center rounded-md border", draft.responsivePreview.device === device ? "border-primary/40 bg-primary/10 text-primary" : "border-line bg-background text-muted hover:text-ink")}
-              aria-label={`${device} preview`}
-            >
-              <Icon className="h-4 w-4" aria-hidden />
-            </button>
-          ))}
+      {activeTool === "pages" ? (
+        <div className="border-t border-line pt-4">
+          <p className="text-xs uppercase tracking-[0.16em] text-primary">Page structure</p>
+          <div className="mt-3 grid gap-2">
+            {[
+              ["Project pages", draft.projectPages.length],
+              ["Visible sections", visibleSections],
+              ["Hidden sections", hiddenSections],
+              ["Navigation items", draft.navigation.filter((item) => item.visible).length]
+            ].map(([label, value]) => (
+              <div key={label as string} className="flex items-center justify-between rounded-md border border-line bg-background px-3 py-2 text-xs">
+                <span className="text-muted">{label as string}</span>
+                <span className="font-semibold text-ink">{value as number}</span>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      ) : null}
 
-      <div className="border-t border-line pt-4">
-        <p className="text-xs uppercase tracking-[0.16em] text-primary">Theme</p>
-        <div className="mt-3 space-y-3">
-          <SettingsSelect label="Typography" value={draft.theme.typography} options={typographyOptions} onChange={(value) => onTheme("typography", value as PortfolioThemeSettings["typography"])} />
-          <SettingsSelect label="Spacing" value={draft.theme.spacing} options={spacingOptions} onChange={(value) => onTheme("spacing", value as PortfolioThemeSettings["spacing"])} />
-          <SettingsSelect label="Color mood" value={draft.theme.colorMood} options={colorOptions} onChange={(value) => onTheme("colorMood", value as PortfolioThemeSettings["colorMood"])} />
-          <SettingsSelect label="Appearance" value={draft.theme.appearance} options={appearanceOptions} onChange={(value) => onTheme("appearance", value as PortfolioThemeSettings["appearance"])} />
-          <SettingsSelect label="Buttons" value={draft.theme.buttonStyle} options={buttonOptions} onChange={(value) => onTheme("buttonStyle", value as PortfolioThemeSettings["buttonStyle"])} />
+      {activeTool === "content" ? (
+        <div className="border-t border-line pt-4">
+          <p className="text-xs uppercase tracking-[0.16em] text-primary">Content editing</p>
+          <p className="mt-2 text-sm leading-6 text-muted">
+            Select Home or a project page, then edit headlines, section titles, body text, captions, and calls to action directly in the canvas.
+          </p>
         </div>
-      </div>
+      ) : null}
 
-      <div className="rounded-md border border-line bg-background p-3">
-        <p className="text-xs uppercase tracking-[0.16em] text-primary">Guardrails</p>
-        <div className="mt-2 space-y-2">
-          {draft.guardrails.length ? draft.guardrails.slice(0, 4).map((guardrail) => (
-            <p key={guardrail} className="text-xs leading-5 text-amber">{guardrail}</p>
-          )) : <p className="text-xs text-emerald">No active builder guardrails.</p>}
+      {activeTool === "evidence" ? (
+        <div className="border-t border-line pt-4">
+          <p className="text-xs uppercase tracking-[0.16em] text-primary">Source links</p>
+          <p className="mt-2 text-sm font-semibold text-ink">{sourceCount} source links attached</p>
+          <p className="mt-1 text-xs leading-5 text-muted">Source badges stay visible when sections and media move.</p>
         </div>
-      </div>
+      ) : null}
+
+      {activeTool === "quality" ? (
+        <div className="border-t border-line pt-4">
+          <p className="text-xs uppercase tracking-[0.16em] text-primary">Portfolio checks</p>
+          <div className="mt-3 grid gap-2">
+            <div className="rounded-md border border-line bg-background p-3">
+              <p className="text-xs uppercase tracking-[0.14em] text-faint">Needs revision</p>
+              <p className="mt-1 text-lg font-semibold text-ink">{revisionCount}</p>
+            </div>
+            <div className="rounded-md border border-line bg-background p-3">
+              <p className="text-xs uppercase tracking-[0.14em] text-faint">Warnings</p>
+              <p className="mt-1 text-lg font-semibold text-ink">{warningCount}</p>
+            </div>
+          </div>
+          <div className="mt-3 rounded-md border border-line bg-background p-3">
+            {draft.guardrails.length ? draft.guardrails.slice(0, 4).map((guardrail) => (
+              <p key={guardrail} className="text-xs leading-5 text-amber">{guardrail}</p>
+            )) : <p className="text-xs text-emerald">No active portfolio checks.</p>}
+          </div>
+        </div>
+      ) : null}
+
+      {activeTool === "theme" ? (
+        <>
+          <div className="border-t border-line pt-4">
+            <p className="text-xs uppercase tracking-[0.16em] text-primary">Responsive preview</p>
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              {[
+                ["desktop", Monitor],
+                ["tablet", Tablet],
+                ["mobile", Smartphone]
+              ].map(([device, Icon]) => (
+                <button
+                  key={device as string}
+                  type="button"
+                  onClick={() => onDevice(device as PortfolioBuilderDevice)}
+                  className={cn("inline-flex min-h-10 items-center justify-center rounded-md border", draft.responsivePreview.device === device ? "border-primary/40 bg-primary/10 text-primary" : "border-line bg-background text-muted hover:text-ink")}
+                  aria-label={`${device} preview`}
+                >
+                  <Icon className="h-4 w-4" aria-hidden />
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="border-t border-line pt-4">
+            <p className="text-xs uppercase tracking-[0.16em] text-primary">Theme</p>
+            <div className="mt-3 space-y-3">
+              <SettingsSelect label="Typography" value={draft.theme.typography} options={typographyOptions} onChange={(value) => onTheme("typography", value as PortfolioThemeSettings["typography"])} />
+              <SettingsSelect label="Spacing" value={draft.theme.spacing} options={spacingOptions} onChange={(value) => onTheme("spacing", value as PortfolioThemeSettings["spacing"])} />
+              <SettingsSelect label="Color mood" value={draft.theme.colorMood} options={colorOptions} onChange={(value) => onTheme("colorMood", value as PortfolioThemeSettings["colorMood"])} />
+              <SettingsSelect label="Appearance" value={draft.theme.appearance} options={appearanceOptions} onChange={(value) => onTheme("appearance", value as PortfolioThemeSettings["appearance"])} />
+              <SettingsSelect label="Buttons" value={draft.theme.buttonStyle} options={buttonOptions} onChange={(value) => onTheme("buttonStyle", value as PortfolioThemeSettings["buttonStyle"])} />
+            </div>
+          </div>
+        </>
+      ) : null}
     </aside>
   );
 }

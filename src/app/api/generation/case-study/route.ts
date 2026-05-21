@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
       after: readiness,
       source: "api"
     });
-    const response = apiError("GENERATION_NOT_READY", "Case study generation is blocked until the persisted blueprint passes readiness validation.", 409, readiness);
+    const response = apiError("GENERATION_NOT_READY", "Complete the portfolio plan and resolve open issues before generating a case study.", 409, readiness);
     setCookieHeaders.forEach((cookie) => response.headers.append("Set-Cookie", cookie));
     return response;
   }

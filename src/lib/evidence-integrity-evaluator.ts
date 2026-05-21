@@ -12,7 +12,7 @@ export function evaluateEvidenceIntegrity(draft: GeneratedCaseStudyDraft): Quali
   const unsupportedClaimSections = draft.sections.filter((section) => section.unsupportedClaims.length);
 
   sectionsWithoutEvidence.forEach((section) => {
-    issues.push(issue(`no-provenance-${section.id}`, "major", `${section.title} has weak or missing provenance.`, "Attach a source artifact or downgrade unsupported claims.", section.id));
+    issues.push(issue(`no-provenance-${section.id}`, "major", `${section.title} has weak or missing source support.`, "Attach a source artifact or downgrade unsupported claims.", section.id));
   });
   missingEvidenceSections.forEach((section) => {
     issues.push(issue(`missing-evidence-${section.id}`, "major", `${section.title} still asks for missing evidence.`, "Add source material or keep the section marked as unresolved.", section.id));
@@ -22,7 +22,7 @@ export function evaluateEvidenceIntegrity(draft: GeneratedCaseStudyDraft): Quali
   });
 
   if (!draft.provenance.length) {
-    issues.push(issue("draft-no-provenance", "blocker", "The draft has no top-level provenance references.", "Regenerate from a persisted blueprint with approved evidence."));
+    issues.push(issue("draft-no-provenance", "blocker", "The draft has no portfolio-level source links.", "Recreate it from the approved portfolio plan with source evidence attached."));
   }
 
   const penalty = sectionsWithoutEvidence.length * 8 + missingEvidenceSections.length * 10 + unsupportedClaimSections.length * 18 + (draft.provenance.length ? 0 : 25);

@@ -17,8 +17,8 @@ export function PortfolioDraftPreview({
   draft,
   isLoading,
   error,
-  emptyTitle = "Create a site draft first",
-  emptyDetail = "The preview only renders saved portfolio drafts from the builder. Create or reset a draft from the approved plan before previewing.",
+  emptyTitle = "Create your portfolio draft first",
+  emptyDetail = "Builder needs to save a portfolio draft before Preview can show the recruiter-facing site.",
   actionHref = "/builder",
   actionLabel = "Open Builder"
 }: PortfolioDraftPreviewProps) {
@@ -38,7 +38,7 @@ export function PortfolioDraftPreview({
   if (!draft) {
     return (
       <section className="rounded-lg border border-amber/25 bg-amber/10 p-5">
-        <p className="text-xs uppercase tracking-[0.18em] text-amber">Preview blocked</p>
+        <p className="text-xs uppercase tracking-[0.18em] text-amber">Preview not ready</p>
         <h2 className="mt-2 text-2xl font-semibold text-ink">{emptyTitle}</h2>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">{error || emptyDetail}</p>
         <Link href={actionHref} className="mt-5 inline-flex min-h-10 items-center gap-2 rounded-md bg-primary px-4 text-sm font-semibold text-slateInk transition hover:bg-primary/90">
@@ -59,7 +59,7 @@ export function PortfolioDraftPreview({
       <div className={cn("rounded-md border p-4", light ? "border-slate-200 bg-white" : "border-line bg-panel")}>
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-current/10 pb-4">
           <div>
-            <p className={cn("text-xs uppercase tracking-[0.18em]", light ? "text-slate-500" : "text-primary")}>Published portfolio draft</p>
+            <p className={cn("text-xs uppercase tracking-[0.18em]", light ? "text-slate-500" : "text-primary")}>Portfolio website preview</p>
             <h2 className="mt-1 text-2xl font-semibold">{draft.homepage.headline}</h2>
           </div>
           <nav className="flex flex-wrap gap-2 text-xs" aria-label="Preview site navigation">
@@ -83,7 +83,7 @@ export function PortfolioDraftPreview({
                 {draft.projectPages.length} project page{draft.projectPages.length === 1 ? "" : "s"}
               </span>
               <span className={cn("rounded-md border px-3 py-2 text-xs font-semibold", light ? "border-slate-200 bg-slate-50" : "border-line bg-background")}>
-                {draft.provenance.length} provenance reference{draft.provenance.length === 1 ? "" : "s"}
+                {draft.provenance.length} source link{draft.provenance.length === 1 ? "" : "s"}
               </span>
             </div>
           </div>
@@ -115,17 +115,17 @@ export function PortfolioDraftPreview({
           <div key={title} className={cn("rounded-md border p-4", light ? "border-slate-200 bg-white" : "border-line bg-panel")}>
             <h3 className="font-semibold">{title}</h3>
             <p className={cn("mt-3 text-sm leading-6", light ? "text-slate-600" : "text-muted")}>
-              Drawn from the approved portfolio strategy and saved draft navigation.
+              Pulled from your saved portfolio plan and page structure.
             </p>
           </div>
         ))}
       </div>
 
       <div className={cn("mt-5 flex flex-wrap items-center justify-between gap-3 rounded-md border p-3 text-xs", light ? "border-slate-200 bg-slate-50 text-slate-600" : "border-line bg-background text-muted")}>
-        <span>{draft.guardrails.length ? draft.guardrails[0] : "Evidence and provenance remain attached to the draft."}</span>
+        <span>{draft.guardrails.length ? draft.guardrails[0] : "Evidence links remain attached to the draft."}</span>
         <span className="inline-flex items-center gap-2 font-semibold text-primary">
           <ShieldCheck className="h-4 w-4" aria-hidden />
-          No hidden publish action
+          Publish stays locked until ready
         </span>
       </div>
     </article>

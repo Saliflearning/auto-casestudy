@@ -37,22 +37,26 @@ const templateCards = [
   {
     title: "UX Research",
     detail: "Methods, findings, evidence quality, limitations, and research impact.",
-    bestFor: "HCI students, UX researchers, research-heavy case studies."
+    bestFor: "HCI students, UX researchers, research-heavy case studies.",
+    rhythm: "Research question -> method -> insight -> decision -> limitation"
   },
   {
     title: "Product Design",
     detail: "Visual flow, iterations, prototype evidence, decisions, and final design.",
-    bestFor: "Product designers and visual portfolio reviews."
+    bestFor: "Product designers and visual portfolio reviews.",
+    rhythm: "Problem -> explorations -> prototype -> iteration -> final direction"
   },
   {
     title: "Technical UX Hybrid",
     detail: "Design reasoning plus architecture, implementation constraints, and systems credibility.",
-    bestFor: "Hybrid UX, cloud, IT, and software project builders."
+    bestFor: "Hybrid UX, cloud, IT, and software project builders.",
+    rhythm: "User problem -> design choice -> system constraint -> technical proof"
   },
   {
     title: "Recruiter Clean",
     detail: "Fast scan path, strongest proof first, concise sections, and clear role ownership.",
-    bestFor: "Early-career professionals applying now."
+    bestFor: "Early-career professionals applying now.",
+    rhythm: "Positioning -> strongest projects -> proof -> handoff"
   }
 ];
 
@@ -74,7 +78,7 @@ function usePortfolioSiteDraft(): LoadState<PortfolioSiteDraft> {
           setState({
             data: null,
             loading: false,
-            error: "No saved portfolio site draft is available yet. Create one in Builder after Strategy has a confirmed blueprint."
+            error: "Create and save your portfolio draft in Builder after finishing Strategy."
           });
         }
       });
@@ -100,7 +104,7 @@ function useReadiness(): LoadState<GenerationReadinessResult> {
         if (!cancelled) setState({ data: payload.readiness ?? null, loading: false, error: "" });
       })
       .catch(() => {
-        if (!cancelled) setState({ data: null, loading: false, error: "Could not load generation readiness." });
+        if (!cancelled) setState({ data: null, loading: false, error: "Could not check portfolio issues." });
       });
     return () => {
       cancelled = true;
@@ -152,8 +156,8 @@ export function ProfileSetupPage() {
       <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
         <PageHeader
           eyebrow="Profile setup"
-          title="Tell the agent who this portfolio is for."
-          detail="Profile context feeds portfolio strategy, homepage positioning, and recruiter-facing copy. It does not replace evidence."
+          title="Shape the professional story."
+          detail="Add the identity, goals, skills, and resume context the portfolio should reflect. Evidence still drives the final claims."
         />
 
         <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_360px]">
@@ -189,7 +193,7 @@ export function ProfileSetupPage() {
           </section>
 
           <aside className="space-y-4">
-            <FlowDependencyCard title="Profile feeds Strategy" detail="The persona selector updates the same studio store used by portfolio planning." />
+            <FlowDependencyCard title="Profile shapes the plan" detail="Your persona and goals guide homepage positioning, project emphasis, and recruiter-facing language." />
             <div className="rounded-lg border border-line bg-surface p-5">
               <p className="text-xs uppercase tracking-[0.18em] text-primary">Current output lens</p>
               <div className="mt-4 grid gap-3">
@@ -224,8 +228,8 @@ export function ProjectsWorkspacePage() {
       <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
         <PageHeader
           eyebrow="Projects"
-          title="Project library and case-study routes."
-          detail="Projects are where case studies live. The page reflects saved builder draft state when available, with clear next actions when upstream work is missing."
+          title="Project library and case studies."
+          detail="Projects are where case studies live. Once Builder saves a draft, this page becomes the clean project index for the portfolio."
         />
 
         {loading ? (
@@ -242,7 +246,7 @@ export function ProjectsWorkspacePage() {
                   <BadgeCheck className="h-5 w-5 text-primary" aria-hidden />
                 </div>
                 <p className="mt-4 text-sm leading-6 text-muted">{project.sectionBlocks.filter((section) => section.visible).length} visible sections</p>
-                <p className="mt-2 text-sm leading-6 text-muted">{project.provenance.length} provenance references attached</p>
+                <p className="mt-2 text-sm leading-6 text-muted">{project.provenance.length} source link{project.provenance.length === 1 ? "" : "s"} attached</p>
                 <Link href="/builder" className="mt-5 inline-flex min-h-10 items-center gap-2 rounded-md border border-line px-3 text-sm font-semibold text-ink transition hover:bg-panelHigh">
                   Edit project page <ArrowRight className="h-4 w-4" aria-hidden />
                 </Link>
@@ -252,9 +256,9 @@ export function ProjectsWorkspacePage() {
         ) : (
           <MissingState
             title="No saved project pages yet"
-            detail={error || `${artifacts.length} artifacts are available in the workspace, but the project library waits for a saved portfolio site draft.`}
+            detail={error || `${artifacts.length} artifacts are available. Create a portfolio draft in Builder to turn them into project pages.`}
             actionHref="/builder"
-            actionLabel="Create site draft in Builder"
+            actionLabel="Create portfolio draft"
           />
         )}
       </section>
@@ -269,8 +273,8 @@ export function TemplatesWorkspacePage() {
       <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
         <PageHeader
           eyebrow="Templates"
-          title="Choose a portfolio archetype, not a random skin."
-          detail="Templates shape structure, hierarchy, media rhythm, and recruiter scanning after evidence is understood."
+          title="Choose the portfolio system."
+          detail="Templates define the page structure, visual rhythm, and storytelling emphasis. They guide the build without replacing your evidence."
         />
         <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {templateCards.map((template) => (
@@ -279,8 +283,12 @@ export function TemplatesWorkspacePage() {
               <h2 className="mt-4 text-xl font-semibold text-ink">{template.title}</h2>
               <p className="mt-3 text-sm leading-6 text-muted">{template.detail}</p>
               <p className="mt-4 rounded-md border border-line bg-background p-3 text-xs leading-5 text-muted">{template.bestFor}</p>
+              <div className="mt-3 rounded-md border border-primary/20 bg-primary/10 p-3">
+                <p className="text-xs uppercase tracking-[0.14em] text-primary">Story rhythm</p>
+                <p className="mt-1 text-xs leading-5 text-muted">{template.rhythm}</p>
+              </div>
               <Link href="/studio#strategy" className="mt-5 inline-flex min-h-10 items-center gap-2 rounded-md border border-line px-3 text-sm font-semibold text-ink transition hover:bg-panelHigh">
-                Use in Strategy <ArrowRight className="h-4 w-4" aria-hidden />
+                Shape my portfolio <ArrowRight className="h-4 w-4" aria-hidden />
               </Link>
             </article>
           ))}
@@ -299,8 +307,8 @@ export function PreviewWorkspacePage() {
       <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
         <PageHeader
           eyebrow="Preview"
-          title="Recruiter-facing portfolio preview."
-          detail="This route intentionally hides editor controls and renders only the saved site draft."
+          title="Preview what recruiters will see."
+          detail="Editor controls are hidden here so you can judge the portfolio like a visitor."
         />
         <div className="mt-8">
           <PortfolioDraftPreview draft={draft} isLoading={loading} error={error} />
@@ -317,15 +325,15 @@ export function BuilderWorkspacePage() {
       <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
         <PageHeader
           eyebrow="Builder"
-          title="Edit the saved portfolio website draft."
-          detail="This is the dedicated builder route. It uses the same persisted plan, composition, and provenance state as the Studio editor."
+          title="Edit your portfolio website."
+          detail="Use Builder for pages, layout, content, source links, theme polish, and responsive preview after Studio prepares the work."
         />
         <div className="mt-8 space-y-6">
           <EditorDependencyGate />
           <PortfolioBuilderWorkspace />
           <div className="rounded-lg border border-line bg-surface p-5">
             <p className="text-xs uppercase tracking-[0.18em] text-primary">Need the full workflow?</p>
-            <h2 className="mt-2 text-xl font-semibold text-ink">Open Studio for upload, review, strategy, generation, and revision tools.</h2>
+            <h2 className="mt-2 text-xl font-semibold text-ink">Open Studio for upload, evidence review, strategy, generation, and revision tools.</h2>
             <Link href="/studio#editor" className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-md border border-line px-3 text-sm font-semibold text-ink transition hover:bg-panelHigh">
               Open Studio editor <ArrowRight className="h-4 w-4" aria-hidden />
             </Link>
@@ -343,8 +351,8 @@ export function PublishWorkspacePage() {
       <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
         <PageHeader
           eyebrow="Publish"
-          title="Publishing setup is gated by readiness."
-          detail="Publish controls unlock only after a saved draft exists and the evidence-backed readiness gate is acceptable."
+          title="Prepare to publish."
+          detail="Resolve the remaining portfolio issues, then unlock hosted site, PDF, and sharing setup."
         />
         <div className="mt-8">
           <PublishReadinessPanel />
@@ -363,7 +371,7 @@ export function EditorDependencyGate() {
   const { data: readiness, loading, error } = useReadiness();
 
   if (loading) {
-    return <div className="rounded-lg border border-line bg-surface p-4 text-sm text-muted">Checking persisted blueprint and generation readiness...</div>;
+    return <div className="rounded-lg border border-line bg-surface p-4 text-sm text-muted">Checking your portfolio plan...</div>;
   }
 
   if (!readiness || readiness.state === "blocked") {
@@ -371,9 +379,9 @@ export function EditorDependencyGate() {
       <section className="rounded-lg border border-amber/25 bg-amber/10 p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-xs uppercase tracking-[0.18em] text-amber">Upstream gate</p>
-            <h2 className="mt-2 text-xl font-semibold text-ink">Confirm the blueprint before generation or builder reset.</h2>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">{error || "The editor can show saved work, but new generation must wait for a persisted, reviewed blueprint."}</p>
+            <p className="text-xs uppercase tracking-[0.18em] text-amber">Next step needed</p>
+            <h2 className="mt-2 text-xl font-semibold text-ink">Complete Strategy before creating or refreshing pages.</h2>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">{error || "You can edit saved work here. New page generation waits until the portfolio plan is reviewed and saved."}</p>
           </div>
           <Link href="/studio#strategy" className="inline-flex min-h-10 items-center gap-2 rounded-md bg-primary px-3 text-sm font-semibold text-slateInk transition hover:bg-primary/90">
             Open Strategy <ArrowRight className="h-4 w-4" aria-hidden />
@@ -394,7 +402,7 @@ export function EditorDependencyGate() {
     <section className="rounded-lg border border-emerald/25 bg-emerald/10 p-4">
       <p className="inline-flex items-center gap-2 text-sm font-semibold text-emerald">
         <BadgeCheck className="h-4 w-4" aria-hidden />
-        Blueprint gate ready. Builder actions can use persisted approved state.
+        Portfolio plan approved. Builder actions can use the reviewed decisions.
       </p>
     </section>
   );
@@ -411,10 +419,10 @@ export function PublishReadinessPanel({ evidenceCoverage, gaps }: { evidenceCove
     <section className="rounded-lg border border-line bg-surface p-5">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-xs uppercase tracking-[0.18em] text-primary">Publish gate</p>
-          <h2 className="mt-2 text-2xl font-semibold text-ink">{ready ? "Portfolio can enter publish setup" : "Publishing is blocked"}</h2>
+          <p className="text-xs uppercase tracking-[0.18em] text-primary">Publish checklist</p>
+          <h2 className="mt-2 text-2xl font-semibold text-ink">{ready ? "Portfolio can enter publish setup" : "Finish these items before publishing"}</h2>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
-            Publish depends on a saved PortfolioSiteDraft plus the generation readiness gate. No hosted output is created from incomplete state.
+            Publishing unlocks after your portfolio draft is saved and the remaining issues are resolved.
           </p>
         </div>
         <span className={cn("rounded-full px-3 py-1 text-xs font-semibold", ready ? "bg-emerald/15 text-emerald" : "bg-amber/15 text-amber")}>
@@ -424,10 +432,10 @@ export function PublishReadinessPanel({ evidenceCoverage, gaps }: { evidenceCove
 
       <div className="mt-5 grid gap-3 md:grid-cols-4">
         {[
-          ["Site draft", draft ? "Saved" : "Missing"],
-          ["Readiness", readiness?.state ?? "Unknown"],
-          ["Evidence coverage", typeof evidenceCoverage === "number" ? `${evidenceCoverage}%` : "From gate"],
-          ["Open gaps", typeof gaps === "number" ? `${gaps}` : `${readiness?.issueCount ?? 0}`]
+          ["Portfolio draft", draft ? "Saved" : "Missing"],
+          ["Issue status", readiness?.state?.replaceAll("-", " ") ?? "Unknown"],
+          ["Evidence coverage", typeof evidenceCoverage === "number" ? `${evidenceCoverage}%` : "Checked by review"],
+          ["Open issues", typeof gaps === "number" ? `${gaps}` : `${readiness?.issueCount ?? 0}`]
         ].map(([label, value]) => (
           <div key={label} className="rounded-md border border-line bg-panel p-3">
             <p className="text-xs uppercase tracking-[0.14em] text-faint">{label}</p>
@@ -438,7 +446,7 @@ export function PublishReadinessPanel({ evidenceCoverage, gaps }: { evidenceCove
 
       {issues.length || error || !draft ? (
         <div className="mt-5 space-y-2">
-          {!draft ? <p className="rounded-md border border-amber/25 bg-amber/10 p-3 text-sm text-amber">Create and save a site draft in Builder before publishing.</p> : null}
+          {!draft ? <p className="rounded-md border border-amber/25 bg-amber/10 p-3 text-sm text-amber">Create and save your portfolio draft in Builder before publishing.</p> : null}
           {error ? <p className="rounded-md border border-danger/25 bg-danger/10 p-3 text-sm text-danger">{error}</p> : null}
           {issues.slice(0, 5).map((issue) => (
             <p key={issue.id} className={cn("rounded-md border p-3 text-sm", issue.severity === "blocker" ? "border-danger/25 bg-danger/10 text-danger" : "border-amber/25 bg-amber/10 text-amber")}>
@@ -468,7 +476,7 @@ export function PublishReadinessPanel({ evidenceCoverage, gaps }: { evidenceCove
       <button
         type="button"
         disabled
-        title={ready ? "Coming soon: hosted publishing jobs are intentionally blocked until preview persistence is verified live." : "Resolve blockers before publishing setup can be enabled."}
+        title={ready ? "Coming soon: hosted publishing setup will be enabled after the preview workflow is fully verified." : "Resolve portfolio issues before publishing setup can be enabled."}
         className="mt-5 inline-flex min-h-11 w-full cursor-not-allowed items-center justify-center gap-2 rounded-md bg-primary px-4 font-semibold text-slateInk opacity-60"
       >
         {ready ? <Sparkles className="h-4 w-4" aria-hidden /> : <Lock className="h-4 w-4" aria-hidden />}
@@ -525,7 +533,7 @@ function TextArea({ label, ...props }: { label: string } & TextareaHTMLAttribute
 function MissingState({ title, detail, actionHref, actionLabel }: { title: string; detail: string; actionHref: string; actionLabel: string }) {
   return (
     <section className="mt-8 rounded-lg border border-amber/25 bg-amber/10 p-5">
-      <p className="text-xs uppercase tracking-[0.18em] text-amber">Needs upstream state</p>
+      <p className="text-xs uppercase tracking-[0.18em] text-amber">Next step needed</p>
       <h2 className="mt-2 text-2xl font-semibold text-ink">{title}</h2>
       <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">{detail}</p>
       <Link href={actionHref} className="mt-5 inline-flex min-h-10 items-center gap-2 rounded-md bg-primary px-4 text-sm font-semibold text-slateInk transition hover:bg-primary/90">

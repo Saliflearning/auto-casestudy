@@ -38,13 +38,13 @@ export const studioFlowSteps: Array<{
     id: "strategy",
     label: "Strategy",
     route: "/studio#strategy",
-    responsibility: "Confirm blueprint decisions, portfolio plan, and orchestration."
+    responsibility: "Review the portfolio plan and approve what the site should emphasize."
   },
   {
     id: "editor",
     label: "Editor",
     route: "/studio#editor",
-    responsibility: "Edit the case study, composed layout, and saved portfolio draft."
+    responsibility: "Create the first project story and prepare editable site pages."
   },
   {
     id: "preview",
@@ -56,7 +56,7 @@ export const studioFlowSteps: Array<{
     id: "export",
     label: "Publish",
     route: "/studio#export",
-    responsibility: "Check readiness and prepare publish/export setup."
+    responsibility: "Resolve final issues and prepare share/export setup."
   }
 ];
 
@@ -73,7 +73,7 @@ export const productRoutes: ProductRoute[] = [
     href: "/profile",
     label: "Profile",
     responsibility: "User identity, target role, bio, skills, links, and resume context.",
-    dependsOn: "Local workspace profile and persona selection.",
+    dependsOn: "Saved profile and persona selection.",
     nextAction: "Use the selected persona in portfolio strategy.",
     primary: true
   },
@@ -88,24 +88,24 @@ export const productRoutes: ProductRoute[] = [
   {
     href: "/studio",
     label: "Studio",
-    responsibility: "Evidence-first workflow from upload through publish readiness.",
-    dependsOn: "Workspace session.",
+    responsibility: "AI workspace for upload, review, planning, and story generation.",
+    dependsOn: "Private portfolio session.",
     nextAction: "Move through Inbox, Review, Strategy, Builder, Preview, Publish.",
     primary: true
   },
   {
     href: "/builder",
     label: "Builder",
-    responsibility: "Framer-style editing constrained by the evidence-backed spine.",
-    dependsOn: "Persisted blueprint, case-study draft, compositions, and orchestration.",
-    nextAction: "Reset or save a site draft from approved planning state.",
+    responsibility: "Website editor for pages, layout, theme, and responsive preview.",
+    dependsOn: "Approved portfolio plan and saved project story.",
+    nextAction: "Create or save a portfolio draft from the approved plan.",
     primary: true
   },
   {
     href: "/preview",
     label: "Preview",
     responsibility: "Clean recruiter-facing preview without editor controls.",
-    dependsOn: "Saved PortfolioSiteDraft.",
+    dependsOn: "Saved portfolio draft.",
     nextAction: "Return to Builder if no draft exists.",
     primary: true
   },
@@ -114,14 +114,14 @@ export const productRoutes: ProductRoute[] = [
     label: "Templates",
     responsibility: "Portfolio archetype and design-system selection.",
     dependsOn: "Persona/archetype strategy.",
-    nextAction: "Choose an archetype before composition and builder editing.",
+    nextAction: "Choose an archetype before layout and builder editing.",
     primary: true
   },
   {
     href: "/publish",
     label: "Publish",
     responsibility: "Domain/export/share setup and final readiness checks.",
-    dependsOn: "Saved site draft and generation readiness gate.",
+    dependsOn: "Saved site draft and resolved portfolio issues.",
     nextAction: "Resolve blockers before publish controls unlock.",
     primary: true
   }
@@ -152,26 +152,26 @@ export const flowDependencies: FlowDependency[] = [
   {
     page: "Review",
     consumes: "Uploaded artifacts, extracted text, classifications, relationship map.",
-    feeds: "Understanding backlog and portfolio planning."
+    feeds: "Evidence review tasks and portfolio planning."
   },
   {
     page: "Strategy",
     consumes: "Evidence graph, backlog, portfolio plan, user review decisions.",
-    feeds: "Confirmed blueprint, layout composition, portfolio orchestration."
+    feeds: "Approved portfolio plan, page layout, and portfolio flow."
   },
   {
     page: "Builder",
-    consumes: "Persisted blueprint, case-study draft, composition, experience plan.",
-    feeds: "Saved PortfolioSiteDraft."
+    consumes: "Approved plan, case-study draft, page layout, and portfolio flow.",
+    feeds: "Saved portfolio draft."
   },
   {
     page: "Preview",
-    consumes: "Saved PortfolioSiteDraft.",
+    consumes: "Saved portfolio draft.",
     feeds: "Publish readiness review."
   },
   {
     page: "Publish",
-    consumes: "Saved PortfolioSiteDraft and generation readiness result.",
+    consumes: "Saved portfolio draft and issue checklist.",
     feeds: "Future hosted publishing and export jobs."
   }
 ].map((item) => ({

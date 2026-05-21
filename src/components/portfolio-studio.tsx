@@ -183,7 +183,7 @@ const cognitionModes = [
     agent: "HCI Academic Agent",
     reads: "papers, course work, study artifacts",
     sees: "rigor, limitations, citations, traceable claims",
-    question: "Which claims need provenance before publishing?"
+    question: "Which claims need source support before publishing?"
   }
 ];
 
@@ -326,7 +326,7 @@ export function PortfolioStudio() {
       }
       addUploadedArtifacts(payload.artifacts as Artifact[]);
       if (payload.evidenceMap) setEvidenceMap(payload.evidenceMap);
-      setUploadSuccess(`${files.length} artifact${files.length === 1 ? "" : "s"} added to the portfolio workspace.`);
+      setUploadSuccess(`${files.length} file${files.length === 1 ? "" : "s"} added to your portfolio evidence.`);
     } catch (error) {
       setUploadError(error instanceof Error ? error.message : "Upload failed.");
     } finally {
@@ -537,7 +537,7 @@ function TopBar({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <span className="inline-flex min-h-11 items-center rounded-md border border-emerald/25 bg-emerald/10 px-3 text-xs font-semibold text-emerald">
-            {workspaceSummary ? `${workspaceSummary.membership.role} workspace` : "Securing workspace"}
+            {workspaceSummary ? "Private portfolio" : "Securing portfolio"}
           </span>
           <span className="inline-flex min-h-11 items-center rounded-md border border-line bg-panel px-3 text-sm text-muted">
             {persona}
@@ -751,9 +751,9 @@ function PortfolioPlanPanel({ plan, artifacts }: { plan: PortfolioStrategyPlan; 
       <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-xs uppercase tracking-[0.18em] text-primary">Portfolio plan</p>
-          <h2 className="mt-2 text-2xl font-semibold">Strategy before generation</h2>
+          <h2 className="mt-2 text-2xl font-semibold">Plan before pages</h2>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
-            A deterministic plan for what belongs where, why it belongs there, what evidence supports it, and what blocks confident generation.
+            Decide what belongs where, why it matters, what evidence supports it, and what needs work before page creation.
           </p>
         </div>
         <div className={cn("rounded-md border px-3 py-2 text-sm font-semibold", readinessTone)}>
@@ -784,8 +784,8 @@ function PortfolioPlanPanel({ plan, artifacts }: { plan: PortfolioStrategyPlan; 
         </article>
 
         <article className="rounded-md border border-line bg-panel p-4">
-          <p className="text-xs uppercase tracking-[0.16em] text-primary">Generation blockers</p>
-          <h3 className="mt-2 text-xl font-semibold">{plan.generationBlockers.length} blockers / warnings</h3>
+          <p className="text-xs uppercase tracking-[0.16em] text-primary">Issues to resolve</p>
+          <h3 className="mt-2 text-xl font-semibold">{plan.generationBlockers.length} issue{plan.generationBlockers.length === 1 ? "" : "s"}</h3>
           <div className="mt-4 space-y-3">
             {plan.generationBlockers.slice(0, 4).map((blocker) => (
               <div key={blocker.id} className="rounded-md border border-line bg-background p-3">
@@ -799,7 +799,7 @@ function PortfolioPlanPanel({ plan, artifacts }: { plan: PortfolioStrategyPlan; 
               </div>
             ))}
             {!plan.generationBlockers.length ? (
-              <p className="rounded-md border border-emerald/25 bg-emerald/10 p-3 text-sm text-emerald">No generation blockers detected for draft planning.</p>
+              <p className="rounded-md border border-emerald/25 bg-emerald/10 p-3 text-sm text-emerald">No major planning issues detected.</p>
             ) : null}
           </div>
         </article>
@@ -899,7 +899,7 @@ function PortfolioReviewWorkspace({ plan, artifacts }: { plan: PortfolioStrategy
         headers: workspaceRequestHeaders()
       });
       const payload = await response.json();
-      if (!response.ok) throw new Error(payload?.error?.message ?? "Could not validate generation readiness.");
+      if (!response.ok) throw new Error(payload?.error?.message ?? "Could not check portfolio issues.");
       setGenerationReadiness(payload.readiness);
       setReadinessState("idle");
     } catch {
@@ -917,7 +917,7 @@ function PortfolioReviewWorkspace({ plan, artifacts }: { plan: PortfolioStrategy
           cache: "no-store",
           headers: workspaceRequestHeaders()
         });
-        if (!response.ok) throw new Error("Could not load saved blueprint.");
+        if (!response.ok) throw new Error("Could not load the saved portfolio plan.");
         const payload = (await response.json()) as { blueprint: PortfolioBlueprintRecord | null; revisionCount: number };
         if (cancelled) return;
         setPersistedBlueprint(payload.blueprint);
@@ -929,7 +929,7 @@ function PortfolioReviewWorkspace({ plan, artifacts }: { plan: PortfolioStrategy
         void checkGenerationReadiness();
       } catch (error) {
         if (cancelled) return;
-        setPersistenceError(error instanceof Error ? error.message : "Could not load saved blueprint.");
+        setPersistenceError(error instanceof Error ? error.message : "Could not load the saved portfolio plan.");
         setSaveState("error");
       }
     }
@@ -950,17 +950,17 @@ function PortfolioReviewWorkspace({ plan, artifacts }: { plan: PortfolioStrategy
         body: JSON.stringify({
           blueprint,
           reviewState,
-          changeSummary: "Saved confirmed portfolio blueprint review decisions."
+          changeSummary: "Saved approved portfolio plan review decisions."
         })
       });
       const payload = await response.json();
-      if (!response.ok) throw new Error(payload?.error?.message ?? "Could not save blueprint.");
+      if (!response.ok) throw new Error(payload?.error?.message ?? "Could not save the portfolio plan.");
       setPersistedBlueprint(payload.blueprint);
       setRevisionCount(payload.revisionCount ?? revisionCount + 1);
       setSaveState("saved");
       await checkGenerationReadiness();
     } catch (error) {
-      setPersistenceError(error instanceof Error ? error.message : "Could not save blueprint.");
+      setPersistenceError(error instanceof Error ? error.message : "Could not save the portfolio plan.");
       setSaveState("error");
     }
   }
@@ -976,14 +976,14 @@ function PortfolioReviewWorkspace({ plan, artifacts }: { plan: PortfolioStrategy
       const revisionsPayload = await revisionsResponse.json();
       if (!revisionsResponse.ok) throw new Error(revisionsPayload?.error?.message ?? "Could not load revisions.");
       const previous = revisionsPayload.revisions?.[1];
-      if (!previous) throw new Error("No previous blueprint revision is available.");
+      if (!previous) throw new Error("No previous portfolio plan version is available.");
       const rollbackResponse = await fetch("/api/portfolio-blueprint/revisions", {
         method: "POST",
         headers: workspaceRequestHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ version: previous.version })
       });
       const rollbackPayload = await rollbackResponse.json();
-      if (!rollbackResponse.ok) throw new Error(rollbackPayload?.error?.message ?? "Could not roll back blueprint.");
+      if (!rollbackResponse.ok) throw new Error(rollbackPayload?.error?.message ?? "Could not restore the portfolio plan.");
         setPersistedBlueprint(rollbackPayload.blueprint);
       setRevisionCount(rollbackPayload.revisionCount ?? revisionCount + 1);
       if (rollbackPayload.blueprint?.reviewState) {
@@ -992,19 +992,19 @@ function PortfolioReviewWorkspace({ plan, artifacts }: { plan: PortfolioStrategy
       setSaveState("saved");
       await checkGenerationReadiness();
     } catch (error) {
-      setPersistenceError(error instanceof Error ? error.message : "Could not roll back blueprint.");
+      setPersistenceError(error instanceof Error ? error.message : "Could not restore the portfolio plan.");
       setSaveState("error");
     }
   }
 
   return (
-    <section className="rounded-lg border border-line bg-surface p-5" aria-label="Portfolio review workspace">
+    <section className="rounded-lg border border-line bg-surface p-5" aria-label="Portfolio plan review">
       <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-xs uppercase tracking-[0.18em] text-primary">Portfolio review workspace</p>
-          <h2 className="mt-2 text-2xl font-semibold">Confirm the blueprint before generation</h2>
+          <p className="text-xs uppercase tracking-[0.18em] text-primary">Portfolio plan review</p>
+          <h2 className="mt-2 text-2xl font-semibold">Approve the plan before pages are created</h2>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
-            Review inferred strategy, override assumptions, resolve blockers, and persist the decisions future generation is allowed to use.
+            Review the suggested direction, override assumptions, resolve issues, and save the decisions the page builder should follow.
           </p>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
@@ -1017,14 +1017,14 @@ function PortfolioReviewWorkspace({ plan, artifacts }: { plan: PortfolioStrategy
             disabled={saveState === "saving" || saveState === "loading"}
             className="min-h-10 rounded-md border border-primary/30 bg-primary/15 px-3 text-sm font-semibold text-primary transition hover:bg-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {saveState === "saving" ? "Saving..." : "Save blueprint"}
+            {saveState === "saving" ? "Saving..." : "Save plan"}
           </button>
         </div>
       </div>
 
       <div className="mb-4 grid gap-3 md:grid-cols-4">
         <div className="rounded-md border border-line bg-panel p-3">
-          <p className="text-xs uppercase tracking-[0.14em] text-faint">Persistence</p>
+          <p className="text-xs uppercase tracking-[0.14em] text-faint">Save status</p>
           <p className="mt-1 text-sm font-semibold text-ink">
             {saveState === "loading" ? "Loading" : hasUnsavedChanges ? "Unsaved changes" : persistedBlueprint ? "Saved" : "Not saved yet"}
           </p>
@@ -1050,27 +1050,27 @@ function PortfolioReviewWorkspace({ plan, artifacts }: { plan: PortfolioStrategy
       <div className="mb-4 rounded-md border border-line bg-panel p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-xs uppercase tracking-[0.16em] text-primary">Generation readiness gate</p>
+            <p className="text-xs uppercase tracking-[0.16em] text-primary">Portfolio issue check</p>
             <h3 className="mt-2 text-lg font-semibold">
-              {generationReadiness ? generationReadiness.state.replaceAll("-", " ") : readinessState === "checking" ? "checking persisted blueprint" : "waiting for validation"}
+              {generationReadiness ? generationReadiness.state.replaceAll("-", " ") : readinessState === "checking" ? "checking saved plan" : "waiting for check"}
             </h3>
             <p className="mt-1 text-sm leading-6 text-muted">
-              The future generator can only read the saved blueprint, approved evidence, approved visuals, and resolved blocker state.
+              New pages can only use saved decisions, approved evidence, approved visuals, and resolved issue notes.
             </p>
           </div>
           <button type="button" onClick={checkGenerationReadiness} className="min-h-9 rounded-md border border-line px-3 text-xs font-semibold text-muted hover:text-ink">
-            Recheck gate
+            Recheck issues
           </button>
         </div>
         <div className="mt-3 grid gap-3 md:grid-cols-4">
           <div className="rounded-md border border-line bg-background p-3">
-            <p className="text-xs uppercase tracking-[0.14em] text-faint">Allowed</p>
+            <p className="text-xs uppercase tracking-[0.14em] text-faint">Can create pages</p>
             <p className={cn("mt-1 text-sm font-semibold", generationReadiness?.canGenerate ? "text-emerald" : "text-danger")}>
               {generationReadiness?.canGenerate ? "Yes" : "No"}
             </p>
           </div>
           <div className="rounded-md border border-line bg-background p-3">
-            <p className="text-xs uppercase tracking-[0.14em] text-faint">Blockers</p>
+            <p className="text-xs uppercase tracking-[0.14em] text-faint">Blocking issues</p>
             <p className="mt-1 text-sm font-semibold text-ink">{generationReadiness?.blockerCount ?? 0}</p>
           </div>
           <div className="rounded-md border border-line bg-background p-3">
@@ -1078,7 +1078,7 @@ function PortfolioReviewWorkspace({ plan, artifacts }: { plan: PortfolioStrategy
             <p className="mt-1 text-sm font-semibold text-ink">{generationReadiness?.warningCount ?? 0}</p>
           </div>
           <div className="rounded-md border border-line bg-background p-3">
-            <p className="text-xs uppercase tracking-[0.14em] text-faint">Blueprint source</p>
+            <p className="text-xs uppercase tracking-[0.14em] text-faint">Plan version</p>
             <p className="mt-1 text-sm font-semibold text-ink">v{generationReadiness?.blueprintVersion ?? 0}</p>
           </div>
         </div>
@@ -1139,7 +1139,7 @@ function PortfolioReviewWorkspace({ plan, artifacts }: { plan: PortfolioStrategy
         </article>
 
         <article className="rounded-md border border-line bg-panel p-4">
-          <p className="text-xs uppercase tracking-[0.16em] text-primary">Blocker review</p>
+          <p className="text-xs uppercase tracking-[0.16em] text-primary">Issue review</p>
           <h3 className="mt-2 text-xl font-semibold">{blueprint.unresolvedBlockerIds.length} unresolved</h3>
           <div className="mt-4 space-y-3">
             {plan.generationBlockers.slice(0, 4).map((blocker) => (
@@ -1158,7 +1158,7 @@ function PortfolioReviewWorkspace({ plan, artifacts }: { plan: PortfolioStrategy
               </div>
             ))}
             {!plan.generationBlockers.length ? (
-              <p className="rounded-md border border-emerald/25 bg-emerald/10 p-3 text-sm text-emerald">No generation blockers detected for draft planning.</p>
+              <p className="rounded-md border border-emerald/25 bg-emerald/10 p-3 text-sm text-emerald">No major planning issues detected.</p>
             ) : null}
           </div>
         </article>
@@ -1243,7 +1243,7 @@ function PortfolioReviewWorkspace({ plan, artifacts }: { plan: PortfolioStrategy
             <label key={caseStudy.projectId} className="block rounded-md border border-line bg-background p-3">
               <span className="text-sm font-semibold text-ink">{caseStudy.title}</span>
               <span className="mt-1 block text-xs leading-5 text-muted">
-                Add ownership, recruiter context, technical depth, or anything the agent must preserve.
+                Add ownership, recruiter context, technical depth, or anything the portfolio should preserve.
               </span>
               <textarea
                 value={review.sectionNotes[caseStudy.projectId] ?? ""}
@@ -1259,10 +1259,10 @@ function PortfolioReviewWorkspace({ plan, artifacts }: { plan: PortfolioStrategy
       <div className="mt-4 rounded-md border border-line bg-panel p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-xs uppercase tracking-[0.16em] text-primary">Confirmed blueprint</p>
+            <p className="text-xs uppercase tracking-[0.16em] text-primary">Approved portfolio plan</p>
             <h3 className="mt-1 text-lg font-semibold">{blueprint.status}</h3>
             <p className="mt-1 text-sm leading-6 text-muted">
-              Future generation must use this reviewed blueprint, excluding rejected projects, rejected/private visuals, and unresolved blockers.
+              Future page creation uses this reviewed plan, excluding removed projects, private visuals, and unresolved issues.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -1278,8 +1278,8 @@ function PortfolioReviewWorkspace({ plan, artifacts }: { plan: PortfolioStrategy
           {[
             ["Projects", blueprint.approvedProjectOrder.length],
             ["Approved visuals", blueprint.approvedVisualIds.length],
-            ["Unresolved blockers", blueprint.unresolvedBlockerIds.length],
-            ["Resolved blockers", blueprint.resolvedBlockerIds.length]
+            ["Unresolved issues", blueprint.unresolvedBlockerIds.length],
+            ["Resolved issues", blueprint.resolvedBlockerIds.length]
           ].map(([label, value]) => (
             <div key={label as string} className="rounded-md border border-line bg-background p-3">
               <p className="text-xs uppercase tracking-[0.14em] text-faint">{label as string}</p>
@@ -1333,11 +1333,11 @@ function PortfolioExperienceWorkspace() {
         headers: workspaceRequestHeaders()
       });
       const payload = await response.json();
-      if (!response.ok) throw new Error(payload?.error?.message ?? "Could not orchestrate the portfolio experience.");
+      if (!response.ok) throw new Error(payload?.error?.message ?? "Could not create the portfolio flow.");
       setPlan(payload.plan);
       setStatus("idle");
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Could not orchestrate the portfolio experience.");
+      setError(caught instanceof Error ? caught.message : "Could not create the portfolio flow.");
       setStatus("error");
     }
   }
@@ -1369,13 +1369,13 @@ function PortfolioExperienceWorkspace() {
   }
 
   return (
-    <section className="rounded-lg border border-line bg-surface p-5" aria-label="Portfolio experience orchestration">
+    <section className="rounded-lg border border-line bg-surface p-5" aria-label="Portfolio flow">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-xs uppercase tracking-[0.18em] text-primary">Portfolio experience</p>
-          <h2 className="mt-2 text-2xl font-semibold">Orchestrate the whole portfolio</h2>
+          <h2 className="mt-2 text-2xl font-semibold">Shape the whole portfolio flow</h2>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
-            Coordinates homepage, project order, navigation, rhythm, and recruiter flow from persisted blueprint and composed pages.
+            Coordinate homepage message, project order, navigation, visual rhythm, and recruiter scan path.
           </p>
         </div>
         <button
@@ -1385,7 +1385,7 @@ function PortfolioExperienceWorkspace() {
           className="inline-flex min-h-10 items-center gap-2 rounded-md border border-primary/30 bg-primary/15 px-3 text-sm font-semibold text-primary transition hover:bg-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
         >
           <Network className="h-4 w-4" aria-hidden />
-          {status === "orchestrating" ? "Orchestrating..." : plan ? "Refresh experience" : "Orchestrate portfolio"}
+          {status === "orchestrating" ? "Shaping..." : plan ? "Refresh flow" : "Shape portfolio flow"}
         </button>
       </div>
 
@@ -1397,7 +1397,7 @@ function PortfolioExperienceWorkspace() {
             <div className="rounded-md border border-line bg-panel p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="text-xs uppercase tracking-[0.16em] text-primary">Homepage orchestration</p>
+                  <p className="text-xs uppercase tracking-[0.16em] text-primary">Homepage direction</p>
                   <h3 className="mt-1 text-xl font-semibold text-ink">{plan.homepage.headline}</h3>
                   <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">{plan.homepage.subheadline}</p>
                 </div>
@@ -1505,7 +1505,7 @@ function PortfolioExperienceWorkspace() {
           {["Homepage narrative", "Project sequence", "Recruiter journey", "Navigation"].map((item) => (
             <div key={item} className="rounded-md border border-line bg-panel p-4">
               <p className="text-sm font-semibold text-ink">{item}</p>
-              <p className="mt-2 text-xs leading-5 text-muted">Created from the saved blueprint and composed page layouts.</p>
+              <p className="mt-2 text-xs leading-5 text-muted">Created after the portfolio plan and project page layout are ready.</p>
             </div>
           ))}
         </div>
@@ -1800,13 +1800,13 @@ function CaseStudyDraftWorkspace() {
   }
 
   return (
-    <section className="mb-6 rounded-lg border border-line bg-surface p-5" aria-label="Case study draft workspace">
+    <section className="mb-6 rounded-lg border border-line bg-surface p-5" aria-label="Case study story workspace">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-xs uppercase tracking-[0.18em] text-primary">Case study draft workspace</p>
+          <p className="text-xs uppercase tracking-[0.18em] text-primary">Project story</p>
           <h2 className="mt-2 text-2xl font-semibold">Generate one evidence-backed project story</h2>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
-            Uses only the persisted blueprint after the readiness gate. Missing proof stays visible instead of being invented.
+            Uses the approved portfolio plan and source evidence. Missing proof stays visible instead of being invented.
           </p>
         </div>
         <button
@@ -1860,7 +1860,7 @@ function CaseStudyDraftWorkspace() {
                   {draft.status}
                 </span>
               </div>
-              <p className="mt-2 text-sm text-muted">Blueprint v{draft.blueprintVersion} - {draft.sections.length} editable sections - {draft.provenance.length} provenance references</p>
+              <p className="mt-2 text-sm text-muted">Plan v{draft.blueprintVersion} - {draft.sections.length} editable sections - {draft.provenance.length} source links</p>
             </div>
 
             {draft.sections.map((section) => (
@@ -1933,7 +1933,7 @@ function CaseStudyDraftWorkspace() {
               <div className="mt-3 space-y-2">
                 {draft.unresolvedIssues.length ? draft.unresolvedIssues.map((item) => (
                   <p key={item} className="rounded-md border border-amber/25 bg-amber/10 p-2 text-xs leading-5 text-amber">{item}</p>
-                )) : <p className="text-sm text-muted">No unresolved generation issues recorded.</p>}
+                )) : <p className="text-sm text-muted">No unresolved story issues recorded.</p>}
               </div>
             </div>
             <div className="rounded-md border border-line bg-panel p-4">
@@ -1951,7 +1951,7 @@ function CaseStudyDraftWorkspace() {
         </div>
       ) : (
         <div className="mt-5 rounded-md border border-line bg-panel p-4 text-sm text-muted">
-          No case study draft yet. Save a confirmed blueprint, pass the readiness gate, then generate one constrained project story.
+          No case study draft yet. Finish Strategy, resolve portfolio issues, then generate one focused project story.
         </div>
       )}
     </section>
@@ -1976,15 +1976,15 @@ function LayoutCompositionWorkspace({
   const warningRegions = composition?.regions.filter((region) => region.kind === "evidence-warning" || region.warnings.length) ?? [];
 
   return (
-    <section className="rounded-md border border-line bg-panel p-4" aria-label="Layout composition workspace">
+    <section className="rounded-md border border-line bg-panel p-4" aria-label="Page layout workspace">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-xs uppercase tracking-[0.16em] text-primary">Layout composition</p>
+          <p className="text-xs uppercase tracking-[0.16em] text-primary">Page layout</p>
           <h3 className="mt-1 text-lg font-semibold text-ink">
             {composition ? "Portfolio page structure composed" : "Compose the case study page"}
           </h3>
           <p className="mt-1 max-w-2xl text-sm leading-6 text-muted">
-            Turns the approved draft into responsive regions, media slots, hierarchy, and provenance overlays.
+            Turns the approved story into responsive sections, media slots, hierarchy, and source callouts.
           </p>
         </div>
         <button
@@ -2105,7 +2105,7 @@ function LayoutCompositionWorkspace({
         </div>
       ) : (
         <div className="mt-4 grid gap-3 lg:grid-cols-3">
-          {["Responsive regions", "Media placement map", "Provenance overlays"].map((item) => (
+          {["Responsive sections", "Media placement map", "Source callouts"].map((item) => (
             <div key={item} className="rounded-md border border-line bg-background p-3">
               <p className="text-sm font-semibold text-ink">{item}</p>
               <p className="mt-1 text-xs leading-5 text-muted">Created after the draft exists and can be traced back to approved evidence.</p>
@@ -2135,8 +2135,8 @@ function RevisionWorkspacePanel({
   const busy = status !== "idle";
 
   return (
-    <section className="rounded-md border border-line bg-panel p-4" aria-label="Revision workspace">
-      <p className="text-xs uppercase tracking-[0.16em] text-primary">Revision workspace</p>
+    <section className="rounded-md border border-line bg-panel p-4" aria-label="Revision review">
+      <p className="text-xs uppercase tracking-[0.16em] text-primary">Revision review</p>
       <h3 className="mt-1 text-lg font-semibold text-ink">{revision ? "Review proposed change" : "No active revision"}</h3>
       <p className="mt-1 text-sm leading-6 text-muted">
         Accept only section-level improvements that preserve evidence and keep missing proof visible.
@@ -2339,7 +2339,7 @@ function CaseStudyQualityPanel({
                   <p key={item} className="rounded-md border border-line bg-background p-3 text-xs leading-5 text-muted">{item}</p>
                 ))}
                 {!report.unsupportedClaims.length && !report.provenanceGaps.length ? (
-                  <p className="rounded-md border border-emerald/25 bg-emerald/10 p-3 text-xs text-emerald">No major unsupported claim or provenance gap was detected.</p>
+                  <p className="rounded-md border border-emerald/25 bg-emerald/10 p-3 text-xs text-emerald">No major unsupported claim or source gap was detected.</p>
                 ) : null}
               </div>
             </div>
@@ -2649,13 +2649,13 @@ function UnderstandingBacklogPanel({
   const criticalCount = backlog.filter((item) => item.priority === "Critical" || item.priority === "High").length;
 
   return (
-    <section className="rounded-lg border border-line bg-surface p-5" aria-label="Understanding backlog">
+    <section className="rounded-lg border border-line bg-surface p-5" aria-label="Evidence review tasks">
       <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-xs uppercase tracking-[0.18em] text-primary">Understanding backlog</p>
-          <h2 className="mt-2 text-2xl font-semibold">What the agent needs before generation</h2>
+          <p className="text-xs uppercase tracking-[0.18em] text-primary">Evidence review tasks</p>
+          <h2 className="mt-2 text-2xl font-semibold">What needs attention before pages are built</h2>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
-            Structured intelligence tasks that connect evidence, portfolio planning, recruiter readability, and guardrails before writing pages.
+            Review these items to improve project grouping, recruiter clarity, evidence quality, and page confidence before writing starts.
           </p>
         </div>
         <span className="rounded-full border border-line bg-panel px-3 py-1 text-sm text-muted">
@@ -2734,7 +2734,7 @@ function EvidenceMapPanel({
       body: JSON.stringify({ cluster })
     });
     if (!response.ok) {
-      setSaveError("Evidence graph save failed. Refresh before trusting this cluster decision.");
+      setSaveError("Could not save this project group. Refresh before relying on the change.");
       return;
     }
     setSaveError("");
@@ -3166,8 +3166,8 @@ function PageEditorCanvas({
         </div>
 
         <div className="rounded-md border border-line bg-panel p-4">
-          <p className="text-xs uppercase tracking-[0.16em] text-primary">Agent recommendations</p>
-          <h4 className="mt-1 font-semibold text-ink">What the agent should do</h4>
+          <p className="text-xs uppercase tracking-[0.16em] text-primary">Portfolio recommendations</p>
+          <h4 className="mt-1 font-semibold text-ink">What this page should include</h4>
           <div className="mt-4 space-y-2">
             {page.mustHave.slice(0, 5).map((item) => (
               <div key={item} className="flex items-start gap-2 rounded-md border border-line bg-background/70 p-3 text-sm text-muted">
@@ -3194,7 +3194,7 @@ function PageEditorCanvas({
           <Layers3 className="h-4 w-4" aria-hidden />
           Add section block - coming soon
         </button>
-        <button type="button" disabled title="Coming soon: manual evidence attachment will be wired to persisted provenance editing." className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-line px-3 text-sm font-semibold text-muted opacity-60 disabled:cursor-not-allowed">
+        <button type="button" disabled title="Coming soon: manual evidence attachment will be wired to saved source-link editing." className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-line px-3 text-sm font-semibold text-muted opacity-60 disabled:cursor-not-allowed">
           <Link className="h-4 w-4" aria-hidden />
           Attach evidence - coming soon
         </button>

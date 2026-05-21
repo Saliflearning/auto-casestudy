@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
   const draft = draftId ? await getCaseStudyDraft(session.workspaceId, draftId) : await getLatestCaseStudyDraft(session.workspaceId);
 
   if (!draft) {
-    const response = apiError("DRAFT_NOT_FOUND", "No persisted case study draft is available for layout composition.", 404);
+    const response = apiError("DRAFT_NOT_FOUND", "Create and save a case study draft before designing the page layout.", 404);
     setCookieHeaders.forEach((cookie) => response.headers.append("Set-Cookie", cookie));
     return response;
   }
