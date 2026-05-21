@@ -16,7 +16,8 @@ Not:
 
 ## Live Audit Context
 
-- Live URL audited: `https://i-have-a-project-design-on.vercel.app/?verify=5a02344`
+- Live URL audited before fixes: `https://i-have-a-project-design-on.vercel.app/?verify=5a02344`
+- Live URL verified after fixes: `https://i-have-a-project-design-on.vercel.app/?verify=95fc72a`
 - Audit method: in-app browser route inspection, DOM/action checks, console checks, viewport screenshots, and targeted click testing.
 - Viewport observed: approximately `949 x 800`, matching the user's right-panel browser context.
 - Routes audited: `/`, `/profile`, `/projects`, `/studio`, `/builder`, `/preview`, `/templates`, `/publish`.
@@ -217,7 +218,7 @@ flowchart LR
 - [x] Console errors checked.
 - [x] Product-language regression checked.
 - [x] Targeted UX fixes applied.
-- [ ] Post-deploy live verification for this patch.
+- [x] Post-deploy live verification for this patch.
 
 ## Next-Step Recommendations
 
