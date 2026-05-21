@@ -126,6 +126,7 @@ model Workspace {
   caseStudyRevisions CaseStudyRevision[]
   portfolioPageCompositions PortfolioPageComposition[]
   portfolioExperiencePlans PortfolioExperiencePlan[]
+  portfolioSiteDrafts PortfolioSiteDraft[]
 }
 
 model WorkspaceMember {
@@ -428,6 +429,21 @@ model PortfolioExperiencePlan {
 
   @@index([workspaceId, createdAt])
   @@index([blueprintId])
+  @@index([status])
+}
+
+model PortfolioSiteDraft {
+  id                     String   @id
+  workspaceId            String
+  sourceExperiencePlanId String?
+  status                 String
+  draftJson              Json
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+  workspace              Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, updatedAt])
+  @@index([sourceExperiencePlanId])
   @@index([status])
 }
 

@@ -62,6 +62,7 @@ import { PortfolioExperiencePlan } from "@/lib/portfolio-experience-types";
 import { PortfolioArchetype, PortfolioStrategyPlan } from "@/lib/portfolio-strategy-types";
 import { useBlueprintReviewStore } from "@/store/blueprint-review-store";
 import { useGaps, usePortfolioStore } from "@/store/use-portfolio-store";
+import { PortfolioBuilderWorkspace } from "@/components/portfolio-builder-workspace";
 
 const personas: Persona[] = [
   "Technical UX Hybrid",
@@ -410,6 +411,7 @@ export function PortfolioStudio() {
         title="Edit portfolio pages"
         detail="Tune page briefs, then refine the case study canvas."
       >
+        <PortfolioBuilderWorkspace />
         <CaseStudyDraftWorkspace />
         <EditorPanel
           sections={sections}

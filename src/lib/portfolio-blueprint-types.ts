@@ -94,7 +94,9 @@ export type BlueprintAuditEventRecord = {
     | "LAYOUT_COMPOSITION_CREATED"
     | "LAYOUT_REGION_REGENERATED"
     | "PORTFOLIO_EXPERIENCE_ORCHESTRATED"
-    | "PORTFOLIO_PROJECTS_RESEQUENCED";
+    | "PORTFOLIO_PROJECTS_RESEQUENCED"
+    | "PORTFOLIO_SITE_DRAFT_RESET"
+    | "PORTFOLIO_SITE_DRAFT_SAVED";
   before?: unknown;
   after?: unknown;
   createdAt: string;
