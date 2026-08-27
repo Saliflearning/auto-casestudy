@@ -60,12 +60,12 @@ function unique(values: string[]) {
 }
 
 function extractDates(text: string) {
-  const matches = text.match(/\b(?:20\d{2}|19\d{2}|jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b(?:\s+\d{1,2})?(?:,\s*\d{4})?/gi);
+  const matches = text.match(/\b(?:(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)(?:\s+\d{1,2}(?:,\s*|\s+)\d{4}|\s+\d{4})?|(?:19|20)\d{2})\b/gi);
   return unique(matches ?? []).slice(0, 8);
 }
 
 function extractProjectName(fileName: string, text: string) {
-  const explicit = text.match(/\b(?:project|case study|title)\s*[:\-]\s*([A-Z][A-Za-z0-9 &/_-]{3,80})/);
+  const explicit = text.match(/\b(?:project|case study|title)\s*[:\-]\s*([A-Z][A-Za-z0-9 &/_-]{3,80})/i);
   if (explicit?.[1]) return explicit[1].trim();
   return fileName.replace(/\.[^/.]+$/, "").replace(/[_-]+/g, " ").trim();
 }
@@ -110,12 +110,13 @@ function confidenceFor(kind: ArtifactClassificationKind, text: string, tags: str
 }
 
 export function classifyArtifactRecord(input: ClassificationInput): ArtifactClassification {
-  const text = `${input.fileName} ${input.extractedText ?? ""}`.toLowerCase();
+  const sourceText = `${input.fileName} ${input.extractedText ?? ""}`;
+  const text = sourceText.toLowerCase();
   const kind = classifyKind(input.fileName, input.fileType, text);
   const tools = matchesFromList(text, toolKeywords);
   const methods = matchesFromList(text, methodKeywords);
-  const dates = extractDates(text);
-  const outcomes = extractOutcomes(text);
+  const dates = extractDates(sourceText);
+  const outcomes = extractOutcomes(sourceText);
   const projectName = extractProjectName(input.fileName, input.extractedText ?? "");
   const courseOrJob = extractCourseOrJob(input.extractedText ?? "");
   const tags = [

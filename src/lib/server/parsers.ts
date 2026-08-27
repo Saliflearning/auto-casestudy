@@ -136,7 +136,7 @@ export async function parseArtifactBytes({
         createdAt: new Date().toISOString()
       }
     };
-  } catch (error) {
+  } catch {
     return {
       status: "Failed",
       parserError: "Parser failed safely. Try a smaller file or export the source document again."

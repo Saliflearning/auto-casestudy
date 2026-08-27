@@ -737,6 +737,8 @@ function PortfolioPageTree({ artifacts, sections }: { artifacts: Artifact[]; sec
   );
 }
 
+// Kept as a standalone alternative view while the interactive review workspace evolves.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function PortfolioPlanPanel({ plan, artifacts }: { plan: PortfolioStrategyPlan; artifacts: Artifact[] }) {
   const artifactMap = new Map(artifacts.map((artifact) => [artifact.id, artifact]));
   const readinessTone =
