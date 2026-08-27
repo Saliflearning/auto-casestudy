@@ -1,115 +1,94 @@
 # Auto-CaseStudy
 
-Auto-CaseStudy is an agentic portfolio builder for HCI students, UX students, and early-career professionals.
+Auto-CaseStudy is an evidence-first portfolio studio that turns mixed career artifacts into structured, reviewable case studies. It is designed for HCI, UX, product, and technical professionals who need to explain not only what they built, but what evidence supports each claim.
 
-It turns scattered school, work, and project evidence into polished, editable portfolio stories.
+## What it demonstrates
 
-## Core Documentation
+- Real text extraction from PDF, DOCX, and PPTX artifacts
+- Deterministic artifact classification, evidence tagging, and relationship mapping
+- User-reviewed portfolio blueprints with revision history and audit events
+- Evidence-constrained case-study generation that surfaces missing proof and unsupported metrics instead of inventing them
+- Quality evaluation, section revisions, layout composition, and portfolio experience orchestration
+- Local development storage plus PostgreSQL and Vercel Blob adapters for durable deployments
+- Signed, HttpOnly workspace sessions and optional password protection for the studio
 
-The project now uses formal product and engineering documents as the source of truth for future development:
+The current intelligence layer is deterministic and inspectable. It does **not** call an external LLM, and the repository does not claim otherwise.
 
-- `docs/PRD_PRODUCT_REQUIREMENTS.md`
-- `docs/TRD_TECHNICAL_REQUIREMENTS.md`
-- `docs/UI_UX_DESIGN_SYSTEM.md`
-- `docs/APP_FLOW.md`
-- `docs/BACKEND_SCHEMA.md`
-- `docs/IMPLEMENTATION_PLAN.md`
-- `docs/STARTUP_QUALITY_SYSTEM.md`
-- `docs/ARCHITECTURE_DOCTRINE_EVIDENCE_FIRST.md`
-- `docs/AGENT_SKILLS_USAGE.md`
+## Architecture
 
-Read these before making product, UX, architecture, schema, or release changes.
+```mermaid
+flowchart LR
+    A[Career artifacts] --> B[Upload and storage]
+    B --> C[PDF / DOCX / PPTX parsing]
+    C --> D[Classification and evidence graph]
+    D --> E[User-reviewed blueprint]
+    E --> F[Constrained case-study generation]
+    F --> G[Quality and revision loop]
+    G --> H[Layout and portfolio draft]
 
-The startup quality system protects the core promise, security posture, team roles, feasibility gates, and QA expectations for every major step.
+    I[(Local JSON or PostgreSQL)] --- B
+    I --- E
+    I --- F
+    J[Vercel Blob] -. optional durable files .- B
+```
 
-## MVP Wedge
+## Technical decisions
 
-The current build proves the first workflow:
+- **Evidence before prose:** generated sections retain artifact IDs and provenance references.
+- **Visible uncertainty:** blockers, missing sections, and unsupported metrics remain explicit.
+- **Progressive persistence:** local JSON keeps development simple; PostgreSQL and Blob support durable hosted environments.
+- **Fail-closed production storage:** serverless production does not silently treat ephemeral disk as durable storage.
+- **Inspectable automation:** keyword rules provide a reliable baseline while leaving a clear boundary for a future model provider.
 
-1. Upload or add messy artifacts.
-2. Let the agent group and interpret evidence.
-3. Generate one editable case study.
-4. Revise manually or with AI-style commands.
-5. Prepare the case study for publish/share.
+## Stack
 
-This is not a generic portfolio page builder. The core product is professional evidence intelligence: artifact understanding, relationship mapping, gap detection, persona-aware narrative construction, and provenance.
+Next.js 16, React 18, TypeScript, Prisma, PostgreSQL, Vercel Blob, Zustand, Tailwind CSS, Vitest, and GitHub Actions.
 
-## Current Status
+## Run locally
 
-This prototype uses local simulated intelligence. It does not yet truly parse PDFs, DOCX files, slides, images, Figma files, GitHub repos, or transcripts.
-
-The app is structured so those capabilities can be added behind the current intelligence layer later.
-
-## Roadmap
-
-- Phase 1: Proof of workflow with demo/manual intelligence.
-- Phase 2: Real parsing for PDFs, DOCX, slides, images, and links.
-- Phase 3: Agent reasoning, relationship mapping, gap detection, and follow-up questions.
-- Phase 4: Editable case study and portfolio builder with templates and structure control.
-- Phase 5: Hosted publishing first, PDF/export later.
-
-## Major Step Documentation Standard
-
-Every major Auto-CaseStudy step should include:
-
-1. High-level diagram or map.
-2. Tech stack used.
-3. What each part does.
-4. How to reproduce it.
-5. Security and privacy notes.
-6. QA checklist.
-7. Feasibility notes.
-8. What comes next.
-
-Use `docs/STEP_TEMPLATE.md` for new implementation milestones.
-
-Completed step notes:
-
-- `docs/STEP_001_FOUNDATION.md`
-- `docs/STEP_002_REAL_ARTIFACT_INGESTION_SKELETON.md`
-- `docs/STEP_003_DURABLE_STORAGE_METADATA_FOUNDATION.md`
-- `docs/STEP_004_PARSING_QUEUE_EXTRACTED_TEXT_LAYER.md`
-- `docs/STEP_005_ARTIFACT_CLASSIFICATION_EVIDENCE_TAGS.md`
-- `docs/STEP_006_ARTIFACT_RELATIONSHIP_MAPPING.md`
-- `docs/STEP_007_USER_CONFIRMED_EVIDENCE_GRAPH.md`
-- `docs/STEP_007_5_UI_DIRECTION_CORRECTION.md`
-- `docs/STEP_007_6_CLEAN_UI_MOTION_DIRECTION.md`
-- `docs/STEP_007_7_PORTFOLIO_PRODUCT_MODEL_HCI_REVIEW.md`
-- `docs/STEP_007_8_PRODUCT_ENGINEERING_DOCUMENTATION_FOUNDATION.md`
-- `docs/STEP_007_9_PRODUCT_SCOPE_ISOLATION.md`
-- `docs/STEP_008_PORTFOLIO_REFERENCE_INTELLIGENCE_SYSTEM.md`
-
-## Local Development
+Requirements: Node.js 20.9 or newer.
 
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 
-Open `http://localhost:3000`.
+Open `http://localhost:3000`. Local development can run without external services and stores generated data under ignored `.data/` files.
 
-## Production Build
+## Verify
 
 ```bash
+npm audit --audit-level=high
+npm run lint
+npm run typecheck
+npm test
 npm run build
-npm run start
 ```
 
-## Vercel
+The test suite covers document parsing, evidence classification, constrained generation, and signed workspace sessions. CI runs the same audit, lint, typecheck, test, and production-build gates.
 
-This project is Vercel-ready as a Next.js app.
+## Optional configuration
 
-Important: Step 003 supports Vercel Blob and PostgreSQL when environment variables are configured. If they are missing, the app falls back to local `.data` storage for development only.
+No credentials belong in source control. Use local environment variables or managed deployment secrets.
 
-Recommended early deployment path:
+- `DATABASE_URL` — PostgreSQL persistence
+- `BLOB_READ_WRITE_TOKEN` — durable artifact storage on Vercel
+- `AUTOCASESTUDY_WORKSPACE_SECRET` — workspace-session signing secret; required in production
+- `AUTOCASESTUDY_STUDIO_PASSWORD` — optional Basic-auth protection for studio and API routes
+- `AUTOCASESTUDY_ALLOW_PUBLIC_ARTIFACT_URLS` — explicit opt-in for public artifact URLs
 
-1. Push this repo to GitHub.
-2. Import the repo in Vercel.
-3. Let Vercel create preview deployments on pull requests.
-4. Add production domain only after the MVP workflow feels credible.
+Optional GitHub-managed Vercel previews run only when the repository variable `VERCEL_PREVIEWS_ENABLED` is set to `true` and the `VERCEL_TOKEN`, `VERCEL_ORG_ID`, and `VERCEL_PROJECT_ID` secrets are configured.
 
-Optional GitHub preview deployment is configured in `.github/workflows/vercel-preview.yml` and requires these repository secrets:
+## Honest limitations
 
-- `VERCEL_TOKEN`
-- `VERCEL_ORG_ID`
-- `VERCEL_PROJECT_ID`
+- Image artifacts are marked `Visual Parsing Pending`; vision extraction is not implemented.
+- The signed workspace cookie protects integrity but is not a full account/login system. A real identity provider and authorization model are required for multi-user production use.
+- Hosted one-click publishing is not implemented yet.
+- Profile details entered in the browser may be stored in local storage; users should avoid entering sensitive personal data on shared devices.
+- External LLM generation, Figma ingestion, repository ingestion, and transcript ingestion are future integrations.
+
+See [docs/PORTFOLIO_READINESS.md](docs/PORTFOLIO_READINESS.md) for the security, privacy, testing, and publication assessment. Detailed product and engineering decisions remain in `docs/`.
+
+## Project status
+
+This is a working engineering prototype with a broad end-to-end workflow, not a production SaaS claim. The strongest next milestone is authenticated multi-user persistence followed by a model-provider boundary that preserves the existing evidence and provenance guarantees.

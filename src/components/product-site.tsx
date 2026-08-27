@@ -2,8 +2,6 @@ import Link from "next/link";
 import { ArrowRight, BriefcaseBusiness, FileText, GraduationCap, LayoutTemplate, Mail, Sparkles, Upload } from "lucide-react";
 import { SiteNav } from "@/components/site-nav";
 
-const portfolioSections = ["Home", "About", "Projects", "Case studies", "Experience", "Skills", "Contact"];
-
 const projectCards = [
   ["UX research case study", "Interview notes, testing results, affinity maps"],
   ["Product design project", "Screens, flows, design rationale"],

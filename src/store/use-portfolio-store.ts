@@ -40,7 +40,7 @@ type PortfolioState = {
 
 export const usePortfolioStore = create<PortfolioState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       persona: initialPersona,
       audienceMode: "Portfolio",
       theme: "Instrument Dark",
