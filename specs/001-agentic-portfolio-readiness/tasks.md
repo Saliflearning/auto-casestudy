@@ -16,4 +16,4 @@
 - [x] T014 Capture and inspect synthetic desktop/mobile screenshots after the canonical direction was recorded.
 - [x] T015 Recover safely from concurrent first-session workspace upserts and verify a fresh workspace in Vercel Preview.
 - [x] T016 Upgrade GitHub Actions to the current Node 24 runtime and verify annotation-free CI.
-- [ ] T017 Make cold-storage parser tests reliable and repeat the fresh-clone release audit.
+- [x] T017 Make cold-storage parser tests reliable and repeat the fresh-clone release audit.
