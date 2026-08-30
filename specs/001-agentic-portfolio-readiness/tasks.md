@@ -10,7 +10,8 @@
 - [x] T008 Repair optional Vercel preview gating so disabled previews skip cleanly.
 - [x] T009 Rewrite README and add architecture/readiness documentation with accurate limitations.
 - [x] T010 Run clean install, full verification, redacted scan, and five-axis review.
-- [ ] T011 Push a PR, require green GitHub checks, and merge safely.
-- [ ] T012 Create the HCI/Agentic overlap and migration-candidate matrix with explicit provenance.
-- [ ] T013 Update the shared D: backlog, decision log, and AI handoff.
-- [ ] T014 Capture and inspect synthetic screenshots only after canonical direction is decided.
+- [x] T011 Push PR #1, require green GitHub/Vercel checks, and merge safely at `03702aa`.
+- [x] T012 Create the HCI/Agentic overlap and migration-candidate matrix with explicit provenance.
+- [x] T013 Update the shared D: backlog, decision log, and AI handoff.
+- [x] T014 Capture and inspect synthetic desktop/mobile screenshots after the canonical direction was recorded.
+- [x] T015 Recover safely from concurrent first-session workspace upserts and verify a fresh workspace in Vercel Preview.
