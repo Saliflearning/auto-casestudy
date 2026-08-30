@@ -2,11 +2,16 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-import { parseArtifactBytes } from "@/lib/server/parsers";
+import { decodeXmlText, parseArtifactBytes } from "@/lib/server/parsers";
 
 const fixture = (name: string) => fileURLToPath(new URL(`../../../test-fixtures/${name}`, import.meta.url));
 
 describe("parseArtifactBytes", () => {
+  it("decodes XML entities exactly once", () => {
+    expect(decodeXmlText("&lt;tag&gt; &amp; &quot;value&quot; &apos;x&apos;")).toBe(`<tag> & "value" 'x'`);
+    expect(decodeXmlText("&amp;lt;script&amp;gt;")).toBe("&lt;script&gt;");
+  });
+
   it("extracts text from a DOCX fixture", async () => {
     const result = await parseArtifactBytes({
       artifactId: "artifact_docx",

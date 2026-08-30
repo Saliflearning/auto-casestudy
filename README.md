@@ -98,6 +98,10 @@ Optional GitHub-managed Vercel previews run only when the repository variable `V
 
 See [docs/PORTFOLIO_READINESS.md](docs/PORTFOLIO_READINESS.md) for the security, privacy, testing, and publication assessment. Detailed product and engineering decisions remain in `docs/`.
 
+## License
+
+This repository is published for portfolio review. No open-source license is granted.
+
 ## Project status
 
 This is a working engineering prototype with a broad end-to-end workflow, not a production SaaS claim. The strongest next milestone is authenticated multi-user persistence followed by a model-provider boundary that preserves the existing evidence and provenance guarantees.
