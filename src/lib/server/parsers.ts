@@ -46,6 +46,15 @@ async function parseDocx(bytes: Buffer) {
   return cleanText(result.value);
 }
 
+export function decodeXmlText(value: string) {
+  return value
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, "&");
+}
+
 async function parsePptx(bytes: Buffer) {
   const zip = await JSZip.loadAsync(bytes);
   const slideFiles = Object.keys(zip.files)
@@ -60,14 +69,7 @@ async function parsePptx(bytes: Buffer) {
     const textNodePattern = /<a:t>(.*?)<\/a:t>/g;
     let match = textNodePattern.exec(xml);
     while (match) {
-      matches.push(
-        match[1]
-          .replace(/&amp;/g, "&")
-          .replace(/&lt;/g, "<")
-          .replace(/&gt;/g, ">")
-          .replace(/&quot;/g, '"')
-          .replace(/&apos;/g, "'")
-      );
+      matches.push(decodeXmlText(match[1]));
       match = textNodePattern.exec(xml);
     }
     if (matches.length) chunks.push(matches.join(" "));

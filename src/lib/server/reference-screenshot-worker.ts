@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { chromium } from "playwright-core";
 import { PortfolioReference, PortfolioReferenceScreenshot } from "@/lib/portfolio-reference-types";
+import { assertPublicHttpUrl } from "@/lib/server/public-url";
 import { StorageConfigurationError, storeReferenceScreenshot } from "@/lib/server/storage";
 
 const DESKTOP_VIEWPORT = { width: 1440, height: 1000 };
@@ -48,6 +49,7 @@ async function capturePageScreenshot(options: {
   fullPage: boolean;
   executablePath: string;
 }): Promise<PortfolioReferenceScreenshot> {
+  await assertPublicHttpUrl(options.reference.normalizedUrl);
   const browser = await chromium.launch({
     executablePath: options.executablePath,
     headless: true,
@@ -59,6 +61,25 @@ async function capturePageScreenshot(options: {
       viewport: options.viewport,
       deviceScaleFactor: 1,
       colorScheme: "light"
+    });
+    const checkedOrigins = new Map<string, Promise<URL>>();
+    await page.route("**/*", async (route) => {
+      const requestUrl = route.request().url();
+      if (!/^https?:/i.test(requestUrl)) {
+        if (/^(about:|blob:|data:)/i.test(requestUrl)) await route.continue();
+        else await route.abort("blockedbyclient");
+        return;
+      }
+
+      try {
+        const origin = new URL(requestUrl).origin;
+        const safetyCheck = checkedOrigins.get(origin) ?? assertPublicHttpUrl(requestUrl);
+        checkedOrigins.set(origin, safetyCheck);
+        await safetyCheck;
+        await route.continue();
+      } catch {
+        await route.abort("blockedbyclient");
+      }
     });
     await page.goto(options.reference.normalizedUrl, {
       waitUntil: "networkidle",

@@ -1,10 +1,10 @@
 # Portfolio Readiness Assessment
 
-Last verified: 2026-08-27
+Last verified: 2026-08-30
 
 ## Recruiter-facing assessment
 
-Auto-CaseStudy is suitable as a public code portfolio candidate after its readiness branch is reviewed and merged. It demonstrates a substantial Next.js application, server-side document processing, evidence-oriented domain modeling, durable-storage adapters, security-aware defaults, and an end-to-end product workflow.
+Auto-CaseStudy is a public code-portfolio showcase. It demonstrates a substantial Next.js application, server-side document processing, evidence-oriented domain modeling, durable-storage adapters, security-aware defaults, and an end-to-end product workflow.
 
 The repository must be presented as an **evidence-first deterministic portfolio studio**, not as a production AI SaaS or a deployed multi-user platform.
 
@@ -13,7 +13,7 @@ The repository must be presented as an **evidence-first deterministic portfolio 
 - `npm audit --audit-level=high`: zero known vulnerabilities
 - `npm run lint`: passes with zero warnings
 - `npm run typecheck`: passes
-- `npm test`: 7 tests across 4 focused suites pass
+- `npm test`: 15 tests across 7 focused suites pass
 - `npm run build`: Next.js 16 production build passes across 34 pages and routes
 
 ## Privacy and secret review
@@ -30,7 +30,9 @@ Before changing visibility, run the scans again against the final commit and ins
 - A signing secret is mandatory in production.
 - Studio/API Basic authentication is optional and activates only when `AUTOCASESTUDY_STUDIO_PASSWORD` is configured.
 - Artifact URLs remain private unless public URLs are explicitly enabled.
-- Local JSON persistence is development-only; durable hosted operation requires PostgreSQL and, for files, Blob storage.
+- Portfolio-reference probes and screenshots revalidate DNS destinations at the network boundary, reject non-public IP ranges and credentials, validate redirects, cap HTML responses, and block browser subrequests to private or reserved networks.
+- Local JSON persistence is development-only, uses application-owned constant paths under ignored `.data/`, and stores JSON-serialized records that are never loaded as executable code. Durable hosted operation requires PostgreSQL and, for files, Blob storage.
+- GitHub Actions use explicit read-only repository permissions. CodeQL, secret scanning with push protection, Dependabot alerts, automated security fixes, and private vulnerability reporting are enabled on GitHub.
 
 ## Known limitations and publication guardrails
 
@@ -42,11 +44,11 @@ Before changing visibility, run the scans again against the final commit and ins
 6. Optional Vercel previews are disabled unless a repository variable explicitly enables them.
 7. ESLint 9 is the newest version accepted by all current Next.js lint-plugin peer ranges; revisit ESLint 10 when those plugins declare compatibility.
 
-## Public-release checklist
+## Continuous public-release checklist
 
 - Re-run current-tree and all-history privacy/secret scans.
 - Confirm all CI checks pass on the pull request.
 - Use screenshots containing synthetic demo data only.
 - Add an accurate GitHub description and topics.
-- Keep the repository private until the HCI Portfolio Agent overlap decision is recorded.
-- If selected as canonical, publish this repository under a stable recruiter-friendly name and document any rename in the shared AI coordination hub.
+- Confirm CodeQL has no unexplained open findings; document any evidence-based false-positive dismissal.
+- Keep the stable repository name, deployment URL, and shared AI coordination hub synchronized after any rename or location change.
