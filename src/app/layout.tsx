@@ -4,7 +4,10 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Auto-CaseStudy | Agentic Portfolio Studio",
   description:
-    "Bring messy artifacts. Get a persona-aware, evidence-backed, editable portfolio ready to publish."
+    "Bring messy artifacts. Get a persona-aware, evidence-backed, editable portfolio ready to publish.",
+  icons: {
+    icon: "/favicon.svg"
+  }
 };
 
 export default function RootLayout({

@@ -13,5 +13,5 @@
 - [x] T011 Push PR #1, require green GitHub/Vercel checks, and merge safely at `03702aa`.
 - [x] T012 Create the HCI/Agentic overlap and migration-candidate matrix with explicit provenance.
 - [x] T013 Update the shared D: backlog, decision log, and AI handoff.
-- [ ] T014 Capture and inspect synthetic screenshots only after canonical direction is decided.
-- [ ] T015 Recover safely from concurrent first-session workspace upserts observed in production.
+- [x] T014 Capture and inspect synthetic desktop/mobile screenshots after the canonical direction was recorded.
+- [x] T015 Recover safely from concurrent first-session workspace upserts and verify a fresh workspace in Vercel Preview.
