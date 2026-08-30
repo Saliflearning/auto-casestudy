@@ -2,6 +2,15 @@
 
 Auto-CaseStudy is an evidence-first portfolio studio that turns mixed career artifacts into structured, reviewable case studies. It is designed for HCI, UX, product, and technical professionals who need to explain not only what they built, but what evidence supports each claim.
 
+![Auto-CaseStudy product overview](docs/assets/auto-casestudy-overview.png)
+
+<details>
+<summary>View the evidence-ingestion studio</summary>
+
+![Auto-CaseStudy evidence studio](docs/assets/auto-casestudy-studio.png)
+
+</details>
+
 ## What it demonstrates
 
 - Real text extraction from PDF, DOCX, and PPTX artifacts
